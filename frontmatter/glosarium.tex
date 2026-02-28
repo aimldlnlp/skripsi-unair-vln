@@ -1,0 +1,23 @@
+% =========================
+% Halaman GLOSARIUM (otomatis)
+% =========================
+% \clearpage
+\phantomsection
+\addcontentsline{toc}{chapter}{DAFTAR GLOSARIUM}
+\markboth{DAFTAR GLOSARIUM}{\textbf{DAFTAR GLOSARIUM}}
+
+% Jika ingin semua entri tercetak walau belum dipanggil dengan \gls{}, biarkan baris ini:
+\glsaddall
+\glsaddallunused % opsional: tampilkan semua entri walau belum dipanggil \gls{}
+
+% Cetak glosarium istilah (type=main adalah default)
+\printglossary[title={DAFTAR GLOSARIUM}, style=long]
+
+% (Opsional) Cetak daftar singkatan dari \newacronym:
+% \clearpage
+% \phantomsection
+% \addcontentsline{toc}{chapter}{DAFTAR SINGKATAN}
+% \markboth{DAFTAR SINGKATAN}{\textbf{DAFTAR SINGKATAN}}
+% \printglossary[type=\acronymtype,title={DAFTAR SINGKATAN}]
+
+% \clearpage

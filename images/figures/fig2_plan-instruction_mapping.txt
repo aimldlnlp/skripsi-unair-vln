@@ -1,0 +1,5 @@
+ALT TEXT:
+Bipartite graph with left nodes as waypoints and right nodes as instruction segments. Edge opacity and thickness reflect alignment weights; patterns include many-to-one and one-to-many links.
+
+CAPTION:
+Mapping of waypoints/sub-tasks to instruction segments for auditability.

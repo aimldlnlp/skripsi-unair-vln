@@ -1,0 +1,5 @@
+ALT TEXT:
+Scatter of topological complexity versus visual fidelity for ~50 synthetic HM3D-style homes. Marker size encodes ground-truth route length; color encodes environment category; a linear trend is overlaid.
+
+CAPTION:
+Environment coverage: topological complexity versus visual fidelity.

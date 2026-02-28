@@ -1,0 +1,5 @@
+ALT TEXT:
+A 2D scalar field (Gaussian mixture) over [-1,1]^2 with a waypoint trajectory shown as an arrowed polyline. Cross marks indicate local failures and triangles indicate replans along the route.
+
+CAPTION:
+Dummy 2D/3D demo illustrating trajectory, scalar field, and waypoints.

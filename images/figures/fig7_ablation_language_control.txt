@@ -1,0 +1,5 @@
+ALT TEXT:
+Line chart showing compliance improvement across five iterations for three settings: no template, template+lexical constraints, and template+judge. Δ annotations show total gains.
+
+CAPTION:
+Ablation of language control versus target ratio compliance.

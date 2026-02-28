@@ -1,0 +1,73 @@
+\chapter{PENDAHULUAN}
+\label{Bab1}
+
+
+\section{Latar Belakang}
+
+Perkembangan \textit{Artificial Intelligence} dalam beberapa tahun terakhir telah mendorong munculnya bidang penelitian baru yang disebut \textit{embodied} AI, yakni agen cerdas yang tidak hanya memahami bahasa dan visual, tetapi juga mampu melakukan aksi fisik di lingkungan nyata \parencite{liu2024embodiedai,savva2019habitat}. Salah satu cabang yang paling menonjol adalah \textit{Vision-and-Language Navigation} (VLN), yaitu kemampuan agen atau robot untuk menavigasi ruang berdasarkan instruksi berbasis bahasa alami yang dipadukan dengan persepsi visual \parencite{anderson2018r2r,wu2021vlnsurvey,ku2020rxr}. Integrasi antara bahasa, visi, dan motorik ini merupakan fondasi penting untuk mewujudkan interaksi manusia–robot yang alami, di mana pengguna dapat memberikan instruksi verbal seperti “jalan lurus lalu belok kanan di dekat sofa,” dan robot mampu menafsirkan serta mengeksekusi perintah tersebut \parencite{zhang2024vlnfm}. Gambar~\ref{fig:ilustasi_vln} mengilustrasikan bagaimana VLN bekerja.
+
+\begin{figure}[!htbp]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/ilustasi_vln.png}
+	\captionsetup{font={stretch=1.5}}
+	\caption[Arsitektur konseptual \textit{Vision-and-Language Navigation} pada agen yang menggabungkan masukan bahasa dengan persepsi lingkungan untuk menghasilkan aksi navigasi yang dieksekusi oleh \textit{controller} melalui \textit{locomotion policy}] {Arsitektur konseptual \textit{Visual-and-Language Navigation} pada agen yang menggabungkan masukan bahasa dengan persepsi lingkungan untuk menghasilkan aksi navigasi yang dieksekusi oleh \textit{controller} melalui \textit{locomotion policy} \parencite{wu2021vlnsurvey}}
+	\label{fig:ilustasi_vln}
+\end{figure}
+
+Secara teknis, VLN melibatkan proses berlapis yang kompleks. Pertama, instruksi berbasis bahasa alami diproses oleh model bahasa untuk menghasilkan representasi semantik \parencite{wu2021vlnsurvey}. Representasi ini kemudian disejajarkan dengan persepsi visual dari lingkungan, baik berupa citra RGB maupun representasi spasial \parencite{savva2019habitat}. Proses pemetaan ini dikenal sebagai \textit{language grounding}, di mana konsep linguistik seperti “pintu,” “koridor,” atau “belok kiri” diproyeksikan ke dalam entitas visual dan relasi spasial yang ada di lingkungan \parencite{xiao2024visualgrounding}. Gambar~\ref{fig:visual-grounding} mengilustrasikan proses \textit{language-vision grounding} pada VLN. Tahap berikutnya adalah perencanaan navigasi, yaitu menerjemahkan hasil grounding ke dalam serangkaian aksi yang dapat dijalankan oleh modul motorik robot, misalnya bergerak lurus sejauh dua meter, berbelok pada persimpangan, atau berhenti di depan sebuah objek tertentu \parencite{wijmans2020vlnce}; dengan demikian, VLN berfungsi sebagai penghubung antara bahasa manusia dengan aksi fisik robot \parencite{thomason2020vision}. 
+
+\begin{figure}[!htbp]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/visual_grounding.jpg}
+	\captionsetup{font={stretch=1.5}}
+	\caption[Ilustrasi \textit{visual grounding} yang memetakan frasa deskriptif pada citra ke objek bertanda kotak hijau sehingga menjadi landasan penyusunan \textit{subgoal} atau \textit{waypoint} dalam VLN pada agen]{Ilustrasi \textit{visual grounding} yang memetakan frasa deskriptif pada citra ke objek bertanda kotak hijau sehingga menjadi landasan penyusunan \textit{subgoal} atau \textit{waypoint} dalam VLN pada agen \parencite{xiao2024visualgrounding}}
+	\label{fig:visual-grounding}
+\end{figure}
+
+Namun, sebagian besar riset VLN masih dilakukan pada robot beroda \parencite{zhang2024vlnfm,wijmans2020vlnce,savva2019habitat}. Robot beroda memiliki dinamika sederhana dan stabil di permukaan datar, sehingga relatif mudah dikendalikan. Sebaliknya, robot berkaki menghadirkan tantangan baru yang lebih kompleks. Sistem lokomosi pada robot berkaki harus mempertimbangkan faktor keseimbangan, koordinasi multi-kaki, serta adaptasi terhadap medan yang tidak rata atau penuh rintangan \parencite{hwangbo2019anymal}. Pengendalian robot berkaki biasanya dilakukan dengan pendekatan pembelajaran penguatan (\textit{reinforcement learning}) yang menghasilkan kebijakan lokomosi seperti berjalan, berbelok, atau menaiki rintangan \parencite{hwangbo2019anymal}. Integrasi VLN dengan modul lokomosi robot berkaki berarti instruksi bahasa yang telah di-\textit{grounding} ke representasi visual harus dapat diterjemahkan ke dalam pola gerak motorik yang stabil dan aman \parencite{thomason2020vision}. Hal ini menjadikan penelitian VLN pada robot berkaki lebih menantang, sekaligus lebih mendekati kebutuhan aplikasi di dunia nyata.
+
+Selain tantangan motorik, terdapat pula aspek linguistik yang penting untuk diperhatikan, yaitu fenomena \textit{code-switching}. \textit{Code-switching} merujuk pada praktik peralihan bahasa dalam satu tuturan \parencite{winata2018codeswitch}. Dalam konteks masyarakat bilingual seperti Indonesia, fenomena ini sangat lazim, misalnya pada instruksi seperti “jalan lurus sampai \textit{hallway}, lalu belok kiri di depan pintu.” Bagi sistem pemrosesan bahasa alami, instruksi campur bahasa ini menghadirkan tantangan tambahan, antara lain pada tahap tokenisasi, representasi semantik, dan pemetaan makna lintas bahasa \parencite{zhang2023multilingual, kuwanto2024linguisticstheorymeetsllm}. Jika sistem VLN hanya dilatih pada satu bahasa, khususnya bahasa Inggris, maka robot berisiko gagal memahami instruksi yang bersifat campur bahasa, padahal hal tersebut merupakan pola komunikasi alami dalam kehidupan sehari-hari \parencite{ku2020rxr}.
+
+Lebih jauh lagi, ketersediaan dataset VLN saat ini masih sangat terbatas pada bahasa Inggris \parencite{zhang2024vlnfm}. Dataset \textit{Room-to-Room} (R2R) \parencite{anderson2018r2r} menjadi tonggak awal dengan menyediakan instruksi navigasi berbasis bahasa alami, sementara \textit{Room across Rooms} (RxR) memperluas skala dan memperkenalkan instruksi dalam beberapa bahasa non-Inggris \parencite{ku2020rxr}. Akan tetapi, dataset tersebut masih belum mencakup bahasa Indonesia maupun variasi \textit{code-switching}. Hal ini menunjukkan adanya kesenjangan dalam penelitian, sekaligus membuka peluang untuk menyusun dataset baru yang secara eksplisit berfokus pada instruksi navigasi berbasis \textit{code-switching} Indonesia–Inggris.
+
+Pentingnya membangun sistem VLN yang \textit{robust} terhadap instruksi campur bahasa terletak pada kemampuannya untuk mendukung interaksi manusia–robot yang lebih inklusif dan alami \parencite{zhang2024vlnfm,thomason2020vision}. Robot yang hanya mengerti satu bahasa akan membatasi pengalaman pengguna, sementara robot yang mampu memahami instruksi \textit{code-switching} dapat lebih fleksibel dalam menghadapi variasi komunikasi multilingual di dunia nyata \parencite{winata2018codeswitch, kuwanto2024linguisticstheorymeetsllm}. Integrasi antara pemrosesan bahasa, \textit{grounding visual}, dan eksekusi motorik pada robot berkaki menjadikan penelitian ini tidak hanya relevan, tetapi juga memiliki nilai kebaruan. Kontribusi penelitian ini mencakup dua aspek utama: pertama, pengembangan dataset instruksi navigasi berbasis \textit{code-switching} Indonesia–Inggris; dan kedua, rancangan sistem VLN yang menghubungkan modul bahasa–visi dengan kontrol motorik robot berkaki. Keduanya diharapkan dapat memberikan kontribusi signifikan pada bidang pemrosesan bahasa alami, robotika, dan interaksi manusia–robot.\\
+
+\section{Rumusan masalah}
+Rumusan masalah dari penelitian ini adalah sebagai berikut:
+% \begin{enumerate}[left=0pt, itemsep=0pt,label=\arabic*., nosep]
+\begin{enumerate}[left=0pt,label=\arabic*.,itemsep=0pt,topsep=0pt,partopsep=0pt,parsep=0pt]
+    \item Sejauh mana arsitektur \textit{planner–controller} untuk VLN pada robot berkaki mampu menerjemahkan instruksi \textit{code-switching} Indonesia–Inggris menjadi urutan \textit{subgoal/waypoint} dan mencapai tujuan navigasi di lingkungan \textit{indoor} simulasi?
+    \item Seberapa besar pengaruh strategi pemrosesan \textit{code-switching} terhadap pemahaman instruksi dibandingkan \textit{baseline} monolingual?\\
+\end{enumerate}
+
+\section{Tujuan penelitian}
+Tujuan penelitian dari penelitian ini adalah sebagai berikut: 
+% \begin{enumerate}[left=0pt, itemsep=0pt,label=\arabic*. ]
+\begin{enumerate}[left=0pt,label=\arabic*.,itemsep=0pt,topsep=0pt,partopsep=0pt,parsep=0pt]
+    \item Mengembangkan dan mengevaluasi arsitektur \textit{planner–controller} yang memetakan instruksi \textit{code-switching} Indonesia–Inggris ke \textit{subgoal/waypoint} dan mengeksekusinya melalui \textit{locomotion policy} pada robot berkaki di simulasi \textit{indoor}.
+    \item Merancang dan membandingkan strategi pemrosesan \textit{code-switching} untuk meningkatkan pemahaman instruksi, relatif terhadap \textit{baseline} monolingual.\\
+\end{enumerate}
+
+\section{Manfaat penelitian}
+Penelitian ini diharapkan memberikan nilai tambah dari sisi teoretis dan praktis sebagai berikut:
+\begin{enumerate}[left=0pt,label=\arabic*.,itemsep=0pt,topsep=0pt,partopsep=0pt,parsep=0pt]
+    \item Memperkaya kajian NLP multilingual melalui strategi pemrosesan \textit{code-switching} yang selaras dengan kebutuhan grounding dan eksekusi aksi.
+    \item Memajukan pemahaman tentang \textit{language–vision grounding} pada skenario navigasi yang realistis dengan instruksi \textit{code-switching}.
+    % \item Memberi kontribusi pada \textit{embodied AI} di lingkungan kontinu melalui rancangan antarmuka \textit{planner–controller} yang menghubungkan representasi linguistik–visual dengan \textit{locomotion policy}.
+    % \item Menawarkan kerangka integrasi bahasa–visi–motorik yang dapat direplikasi untuk platform robot berkaki lain.
+    \item Mengembangkan interaksi manusia-robot yang lebih inklusif di lingkungan multilingual, dengan kemampuan memahami instruksi \textit{code-switching}. \\
+    % \item Menyediakan pedoman kurasi dataset VLN \textit{code-switching} (kriteria penulisan, validasi rute, dokumentasi \textit{switch rate} dan posisi \textit{switch}).\\
+    % \item Merumuskan praktik baik pengujian \textit{robustness} (prosedur stres linguistik, variasi instruksi, dan analisis kesalahan) untuk skenario VLN pada robot berkaki.
+\end{enumerate}
+
+\section{Batasan masalah}
+Batasan berikut diterapkan agar ruang lingkup penelitian terdefinisi secara tegas dan operasional:
+\begin{enumerate}[left=0pt,label=\arabic*.,itemsep=0pt,topsep=0pt,partopsep=0pt,parsep=0pt]
+    \item Penelitian ini dilaksanakan sepenuhnya dalam lingkungan simulasi. Navigasi visual menggunakan lingkungan \textit{indoor} yang bersifat fotoreal atau semi fisik. Lokomosi robot berkaki dilatih dan dieksekusi pada simulator dinamis.
+    \item Fokus bahasa dibatasi pada \textit{code-switching} Indonesia dan Inggris. Bahasa lain tidak dipertimbangkan dalam ruang lingkup penelitian.
+    \item Perilaku robot dibatasi pada lokomosi dasar yang mencakup berjalan, berbelok, dan mencapai \textit{waypoint}. Perilaku seperti manipulasi objek dan interaksi kompleks tidak dilakukan dalam penelitian ini.
+    \item Lingkungan pengujian diasumsikan statis. Objek dinamis seperti manusia, hewan peliharaan, dan penghalang bergerak dinonaktifkan sehingga tata letak dan kondisi objek tetap sepanjang setiap episode.
+    \item Instruksi bahasa diberikan dalam bentuk teks tertulis. Penelitian ini tidak melibatkan pengenalan ucapan atau sintesis ucapan maupun dialog interaktif multi putaran.
+    \item Normalisasi bahasa diterapkan dengan tidak mencakup variasi dialek regional, slang, dan ejaan non standar.
+    \item Penelitian tidak membahas optimasi perangkat keras. Aspek konsumsi daya, efisiensi aktuator, dan detail perangkat keras dikecualikan karena seluruh hasil berfokus pada performa algoritmik di simulasi.
+\end{enumerate}

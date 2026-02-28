@@ -1,0 +1,968 @@
+\chapter{HASIL DAN PEMBAHASAN}
+\label{Bab4}
+
+\section{Analisis Teks Instruksi Berbasis Frasa Objek}
+\label{sec:analisis-teks-frasa-objek}
+\vspace{0.5em}
+
+\subsection{Ringkasan Data dan Unit Analisis}
+\label{subsec:ringkasan-data-unit-analisis}
+Unit analisis pada bagian ini adalah instruksi \textit{natural language} (perintah tekstual) yang digunakan pada episode navigasi. Data dipisahkan menjadi dua kelompok berdasarkan hasil eksekusi tugas, yaitu \textit{success tasks} (506 instruksi) dan \textit{fail tasks} (433 instruksi). Dari setiap instruksi, frasa objek (objek yang diminta untuk diambil/dimanipulasi) diekstrak, lalu dihitung frekuensinya per kelompok. Frekuensi ini menjadi dasar untuk dua analisis utama pada subseksi berikutnya, yaitu: (1) distribusi frekuensi frasa objek melalui plot \textit{Zipf}, serta (2) pemetaan kemunculan frasa objek terhadap \textit{target room} yang disebut dalam instruksi. Sebagai pelengkap deskriptif, bagian ini juga menyajikan ringkasan objek dominan melalui \textit{Top-20} frekuensi dan \textit{wordcloud} pada masing-masing kelompok.
+
+\begin{table}[H]
+\centering
+\caption{Ringkasan Data dan Statistik Frasa Objek}
+\label{tab:summary-frasa-objek}
+\fontsize{10pt}{12pt}\selectfont
+\setlength{\tabcolsep}{3pt}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrrrrr}
+\toprule
+\textbf{Group} & \textbf{Instr.} & \textbf{Total Phrases} & \textbf{Unique Phrases} & \textbf{Phrases/Instr.} & \textbf{Top-10 Share} & \textbf{Top-20 Share} \\
+\midrule
+Success & 506 & 961 & 242 & 1,90 & 37,9\% & 49,7\% \\
+Fail    & 433 & 841 & 238 & 1,94 & 35,1\% & 46,0\% \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+Tabel~\ref{tab:summary-frasa-objek} menunjukkan bahwa kepadatan target objek pada instruksi \textit{success} dan \textit{fail} relatif sebanding, yaitu sekitar 1,9 frasa objek per instruksi. Dengan kata lain, sebagian besar instruksi hanya menargetkan sedikit objek secara eksplisit. Di sisi lain, distribusi frasa objek pada kedua kelompok tampak sangat terkonsentrasi: 10 frasa teratas mencakup lebih dari sepertiga seluruh kemunculan frasa, dan 20 frasa teratas mencakup mendekati setengah korpus. Pola ini mengindikasikan karakter \textit{long-tail}, yaitu sebagian kecil frasa muncul sangat sering sementara banyak frasa lainnya muncul jarang. Konsekuensinya, interpretasi pada frasa berfrekuensi sangat rendah perlu dilakukan dengan hati-hati ketika dibandingkan antar-kelompok. Temuan ringkas ini menjadi dasar pembacaan plot \textit{Zipf} pada subseksi berikutnya.
+\vspace{0.5em}
+
+\subsection{Distribusi Frekuensi Frasa Objek (\textit{Zipf})}
+\label{subsec:zipf}
+Hukum \textit{Zipf} menyatakan bahwa dalam korpus bahasa, frekuensi kata/frasa cenderung berbanding terbalik dengan peringkat kemunculannya: frasa yang menempati peringkat tinggi (sering) akan jauh lebih banyak dibanding frasa pada peringkat rendah (jarang). Konsekuensinya, distribusi kosakata umumnya bersifat \textit{heavy-tailed}/\textit{long-tail}. Untuk memeriksa pola ini pada frasa objek, digunakan plot \textit{rank--frequency} pada skala log--log \parencite{lavi-rotbain2022learnability,mikhaylovskiy-2025-zipfs,yokoi2024zipfian}.
+
+Gambar~\ref{fig:zipf-frasa-objek} menampilkan plot \textit{rank--frequency} frasa objek pada skala log--log. Sumbu-$x$ merepresentasikan peringkat frasa (frasa diurutkan dari yang paling sering hingga paling jarang), sedangkan sumbu-$y$ merepresentasikan frekuensi kemunculan. Kurva yang menurun tajam di awal dan membentuk ekor panjang menunjukkan bahwa distribusi frasa objek pada kedua kelompok konsisten dengan pola \textit{Zipf}/\textit{long-tail}: sebagian kecil frasa objek mendominasi kemunculan, sedangkan mayoritas frasa berada pada frekuensi rendah. Sebagai ilustrasi, frasa yang paling sering muncul adalah \textit{towel} (91 kali pada \textit{success tasks}, 70 kali pada \textit{fail tasks}), selaras dengan konsentrasi pada frasa populer yang juga tercermin pada Tabel~\ref{tab:summary-frasa-objek}.
+
+Plot \textit{Zipf} berguna terutama untuk memahami struktur kosakata secara global, bukan untuk menyoroti frasa tertentu. Pertama, visualisasi ini menegaskan bahwa kosakata frasa objek bersifat \textit{heavy-tailed}, sehingga pembacaan perbedaan antar-kelompok pada frasa yang sangat jarang perlu kehati-hatian. Kedua, secara visual bentuk kurva \textit{success} dan \textit{fail} tampak serupa, yang mengindikasikan bahwa perbedaan hasil eksekusi tidak terutama tercermin sebagai pergeseran besar pada struktur distribusi kosakata frasa objek secara keseluruhan. Dengan demikian, pembeda yang lebih informatif lebih masuk akal untuk ditelusuri pada ringkasan frasa dominan (\textit{Top-20}) dan konteks kemunculan frasa terhadap \textit{target room} pada subseksi berikutnya.
+\vspace{0.5em}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[page=2,width=\linewidth]{images/visualisasi_paperish_fullwidth_notitles_colorful.pdf}
+  \caption{Distribusi Zipf Frekuensi Frasa Objek pada Instruksi}
+  \label{fig:zipf-frasa-objek}
+\end{figure}
+
+\subsection{Frasa Objek Paling Sering Muncul (Top-20)}
+\label{subsec:top20}
+Untuk memberikan ringkasan yang mudah dibaca, Gambar~\ref{fig:top20-success} dan Gambar~\ref{fig:top20-fail} menyajikan 20 frasa objek dengan frekuensi tertinggi pada masing-masing kelompok. Batang yang lebih panjang menunjukkan frasa tersebut lebih sering muncul pada kelompok terkait, sehingga visualisasi ini dapat dibaca sebagai ringkasan ``objek apa'' yang paling sering menjadi target manipulasi pada \textit{success tasks} maupun \textit{fail tasks}.
+
+Tumpang tindih pada frasa dominan (misalnya \textit{towel}, \textit{picture}, \textit{book}) menunjukkan bahwa sejumlah objek rumah tangga menjadi target manipulasi secara konsisten pada kedua kelompok. Temuan ini mengindikasikan bahwa perbedaan hasil eksekusi tidak hanya ditentukan oleh identitas objek yang disebut, melainkan juga dipengaruhi oleh komponen instruksi lain (misalnya struktur langkah atau penunjuk arah) serta kondisi lingkungan/visual. Studi diagnostik pada tugas navigasi berbasis instruksi menunjukkan agen dapat bergantung pada token objek sekaligus token arah, dan kinerja dapat berubah ketika input visual/lingkungan diperturbasi; hal ini menegaskan bahwa faktor visual dan aspek navigasi turut berperan, bukan hanya ``objek apa'' yang disebut \parencite{Zhu2022DiagnosingVLN}. Karena itu, \textit{Top-20} dipakai terutama sebagai ringkasan deskriptif, sedangkan pembacaan konteks yang lebih kaya dilakukan melalui pemetaan asosiasi objek--ruang pada subseksi berikutnya dan dilengkapi oleh analisis kualitatif \textit{fail tasks} pada Bagian~4.2.4.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[page=5,width=\linewidth]{images/visualisasi_paperish_fullwidth_notitles_colorful.pdf}
+  \caption{Top-20 Frasa Objek Terbanyak pada \textit{Success Tasks}}
+  \label{fig:top20-success}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[page=6,width=\linewidth]{images/visualisasi_paperish_fullwidth_notitles_colorful.pdf}
+  \caption{Top-20 Frasa Objek Terbanyak pada \textit{Fail Tasks}}
+  \label{fig:top20-fail}
+\end{figure}
+\vspace{0.5em}
+
+\subsection{Asosiasi Frasa Objek dan Target \textit{Room}}
+\label{subsec:heatmap}
+Selain frekuensi global, analisis ini memetakan asosiasi frasa objek terhadap \textit{target room} yang dirujuk dalam instruksi. \textit{Target room} diambil dari frasa preposisional yang mengikuti penanda tujuan seperti \textit{to/ke/into} dan dicocokkan ke daftar \textit{room} (misalnya \textit{bedroom}, \textit{bathroom}, \textit{kitchen}, \textit{living room}, \textit{office}, \textit{dining}, dan \textit{garage}). Apabila penanda tujuan tidak eksplisit, rujukan \textit{room} juga dapat diambil dari kemunculan nama \textit{room} di dalam instruksi. Untuk setiap frasa objek, \textit{heatmap} dinormalisasi per baris sehingga setiap baris dapat dibaca sebagai proporsi distribusi kemunculan frasa tersebut pada berbagai \textit{room}.
+
+Gambar~\ref{fig:heatmap-success} dan Gambar~\ref{fig:heatmap-fail} menampilkan \textit{heatmap} asosiasi frasa objek--ruang pada masing-masing kelompok. Cara membacanya adalah: pilih satu frasa pada satu baris, lalu periksa kolom \textit{room} dengan intensitas warna tertinggi untuk melihat konteks ruang yang paling dominan bagi frasa tersebut. Normalisasi per baris membuat perbandingan antar-\textit{room} untuk frasa yang sama menjadi jelas. Secara umum, visualisasi ini memperlihatkan bahwa sebagian frasa objek memiliki konteks ruang yang relatif konsisten (proporsi terkonsentrasi pada satu \textit{room}), sementara frasa lain lebih menyebar lintas \textit{room}, sehingga konteks ruangnya lebih bervariasi.
+
+Untuk menonjolkan pergeseran konteks ruang antar-kelompok, Gambar~\ref{fig:heatmap-delta} menampilkan \textit{delta heatmap} (proporsi \textit{fail} dikurangi \textit{success}). Nilai positif menunjukkan pasangan objek--ruang yang relatif lebih sering muncul pada instruksi gagal, sedangkan nilai negatif menunjukkan pasangan yang relatif lebih sering muncul pada instruksi berhasil. Matriks ko-okurensi/ketergantungan konteks semacam ini umum digunakan dalam visualisasi teks untuk menangkap asosiasi berbasis kemunculan bersama, meskipun interpretasinya tetap harus mempertimbangkan skala dan normalisasi \parencite{Skeppstedt2024WordRain}. Secara praktis, \textit{delta heatmap} membantu mengidentifikasi bahwa perbedaan antara \textit{fail} dan \textit{success} cenderung terlokalisasi pada subset pasangan objek--ruang tertentu, alih-alih menjadi perubahan yang merata di seluruh pasangan. Dengan demikian, pembeda yang lebih informatif bukan semata ``objek apa'' yang disebut, melainkan ``objek tersebut muncul dalam konteks ruang tujuan yang bagaimana''.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[page=7,width=\linewidth]{images/visualisasi_paperish_fullwidth_notitles_colorful.pdf}
+  \caption{Asosiasi Frasa Objek dan \textit{Target Room} pada \textit{Success Tasks}}
+  \label{fig:heatmap-success}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[page=8,width=\linewidth]{images/visualisasi_paperish_fullwidth_notitles_colorful.pdf}
+  \caption{Asosiasi Frasa Objek dan \textit{Target Room} pada \textit{Fail Tasks}}
+  \label{fig:heatmap-fail}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[page=9,width=\linewidth]{images/visualisasi_paperish_fullwidth_notitles_colorful.pdf}
+  \caption{Perbedaan Asosiasi Frasa Objek dan \textit{Target Room} Fail Minus Success}
+  \label{fig:heatmap-delta}
+\end{figure}
+
+Interpretasi dilakukan dengan prinsip: (1) sel bernilai tinggi menunjukkan pasangan frasa objek--ruang yang relatif dominan, (2) pola baris menunjukkan konsistensi konteks ruang suatu objek, dan (3) \textit{delta heatmap} menyoroti pasangan yang lebih sering muncul pada \textit{fail} dibanding \textit{success}. Karena \textit{delta} dihitung setelah normalisasi baris, perubahan kecil pada frasa yang jarang dapat terlihat besar; oleh sebab itu, \textit{delta heatmap} dipakai terutama sebagai indikator eksploratif untuk menyaring pasangan objek--ruang yang layak diperiksa lebih lanjut.
+\vspace{0.5em}
+
+\subsection{Ringkasan Leksikal Frasa Objek Melalui \textit{Wordcloud}}
+\label{subsec:wordcloud}
+
+Sebagai ringkasan leksikal, \textit{wordcloud} digunakan untuk memperlihatkan frasa objek yang dominan pada masing-masing kelompok. Pada visualisasi ini, ukuran kata/frasa merepresentasikan frekuensi relatif kemunculan: frasa yang lebih sering muncul akan ditampilkan dengan ukuran lebih besar, sehingga pola dominasi frasa dapat ditangkap dengan cepat. Secara umum, ringkasan visual ini konsisten dengan temuan kuantitatif pada \textit{Top-20}, yaitu dominasi sejumlah kecil frasa objek terhadap korpus.
+
+Meskipun efektif sebagai ringkasan cepat, \textit{wordcloud} tidak dirancang untuk perbandingan kuantitatif yang presisi. Secara khusus, tata letak spasial pada \textit{wordcloud} umumnya tidak membawa makna semantik, dan pembaca cenderung mengandalkan ukuran font sebagai satu-satunya isyarat besaran; hal ini dapat menurunkan akurasi ketika tugas pembaca menuntut penilaian magnitudo yang lebih tepat \parencite{Skeppstedt2024WordRain}. Karena itu, \textit{wordcloud} pada bagian ini diperlakukan sebagai pelengkap interpretasi, sedangkan kesimpulan utama tetap ditopang oleh bukti kuantitatif pada subseksi sebelumnya (misalnya \textit{Top-20} dan \textit{heatmap}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[page=10,width=\linewidth, trim={0mm 18mm 0mm 18mm}, clip]{images/visualisasi_paperish_fullwidth_notitles_colorful.pdf}
+  \caption{\textit{Wordcloud} Frasa Objek pada \textit{Success Tasks}}
+  \label{fig:wc-success}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[page=11,width=\linewidth, trim={0mm 18mm 0mm 18mm}, clip]{images/visualisasi_paperish_fullwidth_notitles_colorful.pdf}
+  \caption{\textit{Wordcloud} Frasa Objek pada \textit{Fail Tasks}}
+  \label{fig:wc-fail}
+\end{figure}
+
+\section{Evaluasi Efektivitas dan Efisiensi Navigasi--Tugas}
+\label{sec:eval_nav_task}
+
+\vspace{0.5em}
+
+\subsection{Protokol Evaluasi dan Kriteria Validitas Eksekusi}
+\label{subsec:nav_task_protocol}
+
+Subbagian ini menjelaskan protokol evaluasi untuk mengukur efektivitas (keberhasilan) dan efisiensi (biaya waktu per langkah) pada skenario navigasi--tugas.
+Seluruh eksperimen dijalankan pada simulator Habitat sebagai platform penelitian \textit{embodied AI} \parencite{savva2019habitat}.
+
+Pada proses eksekusi, kandidat tugas yang dicoba dapat menghasilkan tiga keluaran praktis berikut.
+Pertama, kandidat yang tidak dapat dievaluasi secara valid, misalnya target tidak terjangkau (\textit{unreachable}), target/koordinat tidak terdefinisi,
+atau verifikasi keberhasilan tidak dapat dilakukan secara konsisten.
+Kasus ini dicatat sebagai \textit{fail tasks} untuk diagnosis keterbatasan lingkungan dan kualitas kandidat instruksi, namun tidak dimasukkan ke perhitungan
+\textit{success rate} karena tidak merepresentasikan percobaan evaluasi yang setara.
+Kedua, kandidat yang dapat dievaluasi dan berhasil menyelesaikan rangkaian target hingga selesai (sukses end-to-end).
+Ketiga, kandidat yang dapat dievaluasi namun gagal menyelesaikan rangkaian target karena eksekusi berhenti pada batas langkah maksimum (\textit{timeout}).
+Dengan konvensi ini, metrik berbasis durasi dan langkah dilaporkan pada tugas yang sukses, sedangkan metrik berbasis \textit{success rate} dihitung pada tugas/episode
+yang benar-benar dapat dievaluasi.
+
+Untuk setiap tugas yang sukses, dicatat waktu mulai ($t_{start}$), waktu selesai ($t_{end}$), dan total langkah navigasi ($N_{step}$).
+\textit{Time cost} didefinisikan sebagai waktu rata-rata per langkah untuk menyelesaikan tugas, yaitu durasi eksekusi dibagi jumlah langkah yang ditempuh.
+Definisi ini memudahkan perbandingan efisiensi antar tugas dengan panjang lintasan yang berbeda, karena waktu total dinormalisasi terhadap jumlah langkah.
+
+Pada bidang langkah--waktu, setiap tugas dapat dipetakan sebagai titik $(N_{step}, \Delta t)$, dengan $\Delta t=t_{end}-t_{start}$.
+Secara geometris, \textit{time cost} per tugas dapat dipahami sebagai kemiringan garis dari titik asal menuju titik tugas tersebut.
+Oleh karena itu, garis iso-\textit{time cost} dapat dipahami sebagai himpunan titik dengan kemiringan konstan, sehingga memudahkan interpretasi dan perbandingan
+efisiensi lintasan antar tugas. Semakin curam kemiringan titik terhadap titik asal, semakin besar waktu yang dibutuhkan per langkah.
+Ilustrasi interpretasi tersebut ditunjukkan pada Gambar~\ref{fig:proto_timecost_plane_en}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{images/nav-tugas/fig_protocol_timecost_plane_en_v3.pdf}
+  \caption{Ilustrasi Bidang Langkah--Waktu dan Garis Iso-\textit{Time Cost} (Kemiringan Merepresentasikan Waktu per Langkah)}
+  \label{fig:proto_timecost_plane_en}
+\end{figure}
+
+Efektivitas dilaporkan pada dua level untuk membedakan kegagalan lokal dan kegagalan akumulatif pada rangkaian episode.
+Pertama, \textit{task success rate} mengukur proporsi keberhasilan penyelesaian tugas end-to-end pada task yang \textit{dapat dievaluasi}.
+Kedua, \textit{navigation success rate} mengukur proporsi keberhasilan mencapai target pada level navigasi parsial (episode/sub-goal) pada episode yang \textit{dapat dievaluasi}.
+Pada bab ini, satu ``episode'' didefinisikan sebagai segmen navigasi menuju satu target antara (sub-goal) yang ditetapkan pipeline; satu tugas end-to-end dapat terdiri
+dari beberapa episode berurutan.
+
+Pembentukan \textit{success tasks} dan \textit{fail tasks} dapat dipandang sebagai pemetaan hasil eksekusi simulator ke dua lapisan berbeda (sukses/gagal).
+Untuk memperjelas konsep ini, Gambar~\ref{fig:proto_partition_3d_en} menampilkan ilustrasi ruang 3D di mana tugas sukses dipetakan pada lapisan $z=1$ dan tugas gagal
+dipetakan pada lapisan $z=0$. Visualisasi ini menegaskan bahwa metrik-metrik kuantitatif durasi/langkah dihitung pada tugas sukses, sedangkan tugas gagal tetap dicatat
+sebagai statistik kegagalan dan bahan analisis kualitas instruksi serta keterbatasan lingkungan.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth, trim={20mm 9mm 20mm 13mm}, clip]{images/nav-tugas/fig_protocol_3d_partition_en_v3.pdf}
+  \caption{Ilustrasi Ruang Eksekusi 3D yang Menunjukkan Partisi Menjadi \textit{Success Tasks} dan \textit{Fail Tasks}}
+  \label{fig:proto_partition_3d_en}
+\end{figure}
+
+\vspace{0.5em}
+
+\subsection{Hasil Evaluasi Kuantitatif}
+\label{subsec:nav_task_results}
+
+Subbagian ini melaporkan hasil evaluasi kuantitatif untuk metrik efektivitas--efisiensi navigasi--tugas.
+Metrik berbasis durasi dan jumlah langkah (misal \textit{step} dan \textit{time cost}) dilaporkan pada \textit{success tasks} agar merepresentasikan eksekusi yang valid.
+Sementara itu, metrik berbasis rasio keberhasilan dihitung pada tugas/episode yang dapat dievaluasi sesuai protokol pada subbagian sebelumnya.
+
+Tabel~\ref{tab:navtask_summary} merangkum metrik utama yang diperoleh.
+
+\begin{table}[H]
+\centering
+\caption{Ringkasan Metrik Efektivitas--Efisiensi Navigasi--Tugas}
+\label{tab:navtask_summary}
+\fontsize{10}{12}\selectfont
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}} l p{0.52\textwidth} r @{}}
+\toprule
+\textbf{Metrik} & \textbf{Deskripsi} & \textbf{Nilai} \\
+\midrule
+\textit{Mean task step} &
+Rata-rata jumlah langkah untuk menyelesaikan satu tugas end-to-end pada \textit{success tasks}. &
+233{,}70 \\
+\textit{Mean navigation step} &
+Rata-rata jumlah langkah navigasi pada episode yang berhasil mencapai sub-goal di dalam rangkaian tugas. &
+72{,}85 \\
+\textit{Mean task success rate} &
+Proporsi keberhasilan penyelesaian tugas end-to-end terhadap seluruh tugas yang \textit{dapat dievaluasi}. &
+0{,}9945 \\
+\textit{Mean navigation success rate} &
+Proporsi keberhasilan mencapai target pada level episode terhadap seluruh episode yang \textit{dapat dievaluasi}. &
+0{,}9982 \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+Tabel~\ref{tab:navtask_summary} menunjukkan bahwa keberhasilan pada level tugas dan level episode sama-sama sangat tinggi.
+Perbedaan kecil antara \textit{Mean task success rate} dan \textit{Mean navigation success rate} mengindikasikan bahwa sebagian kecil kegagalan end-to-end
+lebih mungkin muncul akibat akumulasi risiko pada rangkaian episode, bukan karena episode navigasi parsial sering gagal secara individual.
+
+Perbedaan rata-rata jumlah langkah pada level tugas dan level episode memberikan indikasi bahwa satu tugas end-to-end terdiri dari beberapa episode navigasi.
+Sebagai indikator kasar kompleksitas rangkaian episode, rasio berbasis rata-rata langkah menghasilkan aproksimasi jumlah episode efektif per tugas sekitar 3{,}21.
+Nilai ini tidak dimaksudkan sebagai estimator eksak jumlah episode diskret pada setiap tugas, melainkan indikator makro untuk mengkuantifikasi tingkat \textit{long-horizon}.
+Perbandingan rata-rata langkah pada kedua level ditunjukkan pada Gambar~\ref{fig:steps_lollipop_v2}, di mana \textit{Mean task step} lebih besar karena merupakan
+akumulasi beberapa episode dalam satu rangkaian tugas.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{images/nav-tugas/fig_results_steps_lollipop_v2.pdf}
+  \caption{Perbandingan \textit{Mean Task Step} dan \textit{Mean Navigation Step} Menggunakan Lollipop Plot}
+  \label{fig:steps_lollipop_v2}
+\end{figure}
+
+Nilai \textit{success rate} pada rezim mendekati 1 sulit dibedakan secara visual apabila diplot langsung sebagai SR.
+Untuk meningkatkan keterbacaan, hasil divisualisasikan dalam bentuk \textit{failure rate} (1--SR), sehingga perbedaan kecil tetap terlihat tanpa memerlukan pemotongan skala.
+Gambar~\ref{fig:failure_rate_lollipop_v2} memperlihatkan bahwa \textit{failure rate} pada level tugas sedikit lebih tinggi daripada level episode,
+yang konsisten dengan sifat tugas berantai: kegagalan pada satu episode dapat menggagalkan keseluruhan tugas end-to-end.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{images/nav-tugas/fig_results_failure_rate_lollipop_v2.pdf}
+  \caption{Perbandingan \textit{Failure Rate} pada Level Tugas dan Level Navigasi Menggunakan Lollipop Plot}
+  \label{fig:failure_rate_lollipop_v2}
+\end{figure}
+
+Log \textit{time cost} memuat 512 nilai, dan terdapat 6 nilai sangat kecil ($<0{,}01$) pada rentang 0{,}0002196 hingga 0{,}0003034 waktu/step.
+Nilai ini terpaut sangat jauh dari skala distribusi utama: pada data bersih, nilai minimum adalah 0{,}093813 dan persentil 5\% adalah 0{,}131844,
+sehingga keenam nilai tersebut ratusan kali lebih kecil daripada batas bawah sebaran utama.
+Nilai sangat kecil ini muncul pada percobaan yang tidak selesai (\textit{timeout}) atau dicatat dengan normalisasi durasi yang berbeda dari definisi \textit{time cost}
+pada tugas sukses, sehingga tidak sebanding untuk membandingkan efisiensi per langkah antar tugas.
+Oleh karena itu, analisis efisiensi \textit{time cost} dilaporkan pada tugas sukses dengan definisi yang konsisten, dan keenam nilai tersebut dikeluarkan agar ringkasan statistik
+tidak terdistorsi, dengan tetap melaporkan kriteria penyaringan secara eksplisit \parencite{benShachar2024outliers}.
+Setelah penyaringan dengan ambang $<0{,}01$, jumlah sampel menjadi 506 dan konsisten dengan jumlah \textit{success tasks}.
+
+Distribusi \textit{time cost} sebelum dan sesudah penyaringan ditunjukkan pada Gambar~\ref{fig:timecost_hist_raw_clean_v6}.
+Perbedaan utama antara kedua distribusi adalah adanya massa probabilitas yang menempel di dekat nol pada data mentah, yang hilang setelah penyaringan,
+sementara sebaran utama tetap serupa. Pita IQR serta penanda kuantil menunjukkan bahwa pembersihan tidak mengubah karakteristik distribusi utama.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{images/nav-tugas/fig_results_timecost_hist_raw_vs_clean_v6.pdf}
+  \caption{Distribusi \textit{Time Cost} Sebelum dan Sesudah Penyaringan \textit{outlier} ($<0{,}01$) dengan Penanda Kuantil dan Pita IQR}
+  \label{fig:timecost_hist_raw_clean_v6}
+\end{figure}
+
+Tabel~\ref{tab:nav_timecost_stats} melaporkan statistik robust untuk \textit{time cost} pada data bersih.
+Median dan IQR digunakan sebagai ringkasan yang stabil terhadap ekor distribusi, sedangkan rentang P5--P95 menggambarkan sebaran utama dengan mengabaikan ekor ekstrem,
+konsisten dengan praktik statistik nonparametrik berbasis distribusi empiris \parencite{henze2024edf}.
+Secara praktis, nilai tipikal \textit{time cost} berada di sekitar median $\approx 0{,}20$ waktu/step.
+
+\begin{table}[H]
+\centering
+  \caption{Statistik Robust \textit{Time Cost} pada \textit{Success Tasks} (Setelah Penyaringan \textit{outlier} $<0{,}01$).}
+\label{tab:nav_timecost_stats}
+\fontsize{10}{12}\selectfont
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}} l p{0.52\textwidth} r @{}}
+\toprule
+\textbf{Statistik} & \textbf{Deskripsi} & \textbf{Nilai} \\
+\midrule
+Mean &
+Rata-rata \textit{time cost} (waktu per langkah) pada distribusi yang telah dibersihkan. &
+0{,}20775 \\
+Std &
+Derajat variasi \textit{time cost} di sekitar nilai rata-rata. &
+0{,}05924 \\
+Median &
+Nilai tengah (robust terhadap outlier), merepresentasikan \textit{time cost} tipikal. &
+0{,}19712 \\
+P5--P95 &
+Rentang kuantil 5\% sampai 95\% untuk menggambarkan sebaran utama (mengabaikan ekor ekstrem). &
+0{,}13184 -- 0{,}31202 \\
+IQR (P25--P75) &
+Rentang kuantil 25\% sampai 75\% sebagai ukuran sebaran robust (\textit{interquartile range}). &
+0{,}16401 -- 0{,}24140 \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+Untuk memberikan konteks variasi efisiensi per langkah, data bersih menunjukkan bahwa \textit{time cost} minimum adalah 0{,}09381 (waktu/step paling cepat)
+dan maksimum adalah 0{,}51850 (waktu/step paling lambat), sehingga ekstrem atas sekitar 5{,}53$\times$ lebih besar daripada ekstrem bawah.
+Perbedaan ini menunjukkan bahwa meskipun perilaku tipikal berkisar di sekitar 0{,}20 waktu/step, terdapat kasus-kasus tertentu yang secara signifikan lebih mahal per langkah.
+
+Sebagai pelengkap, Gambar~\ref{fig:timecost_ecdf_v2} menampilkan kurva ECDF dari \textit{time cost} pada data bersih.
+Sebagai contoh pembacaan, median 0{,}19712 berarti sekitar 50\% tugas sukses memiliki \textit{time cost} tidak lebih dari 0{,}19712,
+dan persentil 95\% sebesar 0{,}31202 berarti sekitar 95\% tugas sukses berada pada \textit{time cost} di bawah 0{,}31202 \parencite{henze2024edf}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{images/nav-tugas/fig_results_timecost_ecdf_v2.pdf}
+  \caption{Kurva ECDF \textit{Time Cost} pada Data Bersih dengan Penanda P5, Median, dan P95.}
+  \label{fig:timecost_ecdf_v2}
+\end{figure}
+
+\vspace{0.5em}
+
+\subsection{Efektivitas vs Efisiensi pada Skenario \textit{Long-Horizon}}
+\label{subsec:nav_task_discussion}
+
+Nilai \textit{Mean task step} sebesar 233{,}70 menunjukkan bahwa tugas yang berhasil dieksekusi rata-rata membutuhkan ratusan langkah.
+Dalam konteks navigasi berantai, skala langkah seperti ini mengindikasikan skenario \textit{long-horizon} yang bersifat multi-tahap (multiobjek/sub-goal).
+Konsekuensinya, efektivitas end-to-end tidak hanya ditentukan oleh kemampuan mencapai satu target, tetapi juga oleh stabilitas eksekusi pada beberapa episode berurutan,
+sehingga error kecil pada tiap tahap berpotensi terakumulasi dan menurunkan keberhasilan end-to-end.
+Benchmark modern untuk agen \textit{embodied} juga menekankan perlunya diagnosis yang lebih halus daripada \textit{final success rate} karena kegagalan dapat muncul dari
+berbagai sumber (misal \textit{planning error} dan \textit{affordance error}) \parencite{li2024eai}.
+
+Rasio rata-rata langkah mengindikasikan sekitar 3{,}21 episode per tugas (secara agregat).
+Dengan beberapa episode berurutan, keberhasilan end-to-end menjadi lebih rapuh terhadap kesalahan kecil pada tiap episode: kegagalan pada satu episode saja dapat menggagalkan
+keseluruhan rangkaian.
+Literatur perencanaan \textit{long-horizon} juga melaporkan bahwa error perencanaan dapat bersifat akumulatif ketika horizon bertambah, sehingga performa end-to-end dapat turun
+meskipun komponen lokal tampak sangat kuat \parencite{deps2023neurips,egoplan2023neurips}.
+
+Selisih kecil antara \textit{Mean navigation success rate} (0{,}9982) dan \textit{Mean task success rate} (0{,}9945) konsisten dengan perspektif reliabilitas:
+tugas end-to-end dapat dipandang sebagai rangkaian fase/episode yang seluruhnya harus berhasil. Dalam kerangka ini, ketika jumlah fase meningkat,
+peluang sukses total menurun secara kumulatif walaupun peluang sukses per fase sangat tinggi. Model penilaian \textit{mission success probability} pada
+\textit{phased-mission systems} dan analisis kegagalan pada sistem seri--paralel juga membahas mekanisme akumulasi risiko kegagalan pada rangkaian fase/komponen
+\parencite{zhang2024msp_pms,torrado2024series_parallel_dependent}.
+Meskipun analogi reliabilitas sering diasosiasikan dengan asumsi independensi antar fase, pada konteks navigasi berantai interpretasi ini digunakan sebagai justifikasi konseptual
+untuk menjelaskan kecenderungan penurunan keberhasilan end-to-end ketika jumlah episode meningkat, tanpa mengklaim independensi penuh antar episode.
+Intinya, semakin banyak episode yang harus berhasil secara berurutan, semakin besar peluang setidaknya satu episode gagal, sehingga keberhasilan end-to-end menurun secara kumulatif.
+
+Gambar~\ref{fig:disc_risk_contour_dense} dapat dibaca sebagai berikut: sumbu horizontal merepresentasikan keberhasilan per episode, dan sumbu vertikal merepresentasikan panjang horizon efektif (jumlah episode).
+Kontur menunjukkan nilai keberhasilan end-to-end yang diprediksi pada kombinasi kedua besaran tersebut.
+Titik observasi menandai nilai yang diukur pada eksperimen, dan kedekatan titik dengan kontur nilai terukur menunjukkan konsistensi hubungan akumulasi risiko pada data.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.96\linewidth]{images/nav-tugas/fig_discussion_risk_contour_2d_v4_dense_left.pdf}
+  \caption{Peta Kontur Akumulasi Risiko End-to-End Berbasis Keberhasilan Per Episode dan Panjang Horizon Efektif, dengan Titik Observasi dan Kontur Nilai Terukur.}
+  \label{fig:disc_risk_contour_dense}
+\end{figure}
+
+Gambar~\ref{fig:disc_risk_curve_panels} memberikan pandangan komplementer: kurva sensitivitas memperlihatkan bagaimana perubahan jumlah episode efektif memengaruhi keberhasilan end-to-end pada keberhasilan episode yang tinggi,
+sedangkan panel \textit{zoom} menonjolkan selisih kecil antara prediksi ilustratif dan nilai terukur di sekitar titik observasi.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.96\linewidth]{images/nav-tugas/fig_discussion_risk_curve_2d_v4_panels.pdf}
+  \caption{Kurva Akumulasi Risiko dan Panel Diagnostik untuk Memvalidasi Konsistensi Antara Prediksi Ilustratif dan Nilai Terukur di Sekitar Titik Observasi.}
+  \label{fig:disc_risk_curve_panels}
+\end{figure}
+
+Karena skenario bersifat \textit{long-horizon}, efisiensi per langkah berkontribusi langsung terhadap total runtime end-to-end.
+Selain itu, \textit{time cost} sensitif terhadap artefak pencatatan pada ekor distribusi; oleh sebab itu, ringkasan robust (median, IQR, dan rentang P5--P95)
+lebih informatif daripada hanya mean untuk merepresentasikan perilaku tipikal sistem secara stabil \parencite{benShachar2024outliers,henze2024edf}.
+
+\vspace{0.5em}
+
+\subsection{Analisis Kualitatif \textit{Fail Tasks} dan Akar Masalah}
+\label{subsec:nav_task_fail_analysis}
+
+\textit{Fail tasks} merepresentasikan kandidat instruksi yang tidak dapat dieksekusi hingga memenuhi kriteria keberhasilan end-to-end, baik karena kendala \textit{reachability},
+kegagalan perencana lintasan, mismatch batasan aksi lingkungan, maupun ambiguitas instruksi yang mengganggu \textit{grounding}.
+Secara kualitatif, kegagalan yang diamati dapat dirangkum ke dalam empat \textit{failure mode} berikut:
+\begin{enumerate}[label=(\arabic*), left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt]
+  \item F1: Objek non-manipulable namun diminta diambil, misalnya objek statis/terpasang.
+  \item F2: Target manipulasi tidak valid, misalnya objek besar atau tidak memenuhi prasyarat aksi pada lingkungan.
+  \item F3: Target penempatan tidak valid/ambigu, misalnya permukaan/\textit{receptacle} tidak valid sehingga verifikasi keberhasilan tidak konsisten.
+  \item F4: Referensi entitas/area ambigu, sehingga pemetaan instruksi ke target aksi tidak deterministik.
+\end{enumerate}
+
+Untuk memperjelas relasi antara \textit{failure mode} dan kategori akar penyebab, Gambar~\ref{fig:failmode_rootcause_matrix} menyajikan matriks
+\textit{Failure Mode} $\times$ \textit{Root Cause}.
+Setiap sel mengodekan tingkat kontribusi penyebab terhadap suatu \textit{failure mode} secara kualitatif (\textit{None/Low/Medium/High}).
+Pemetaan ini disusun sebagai ringkasan interpretatif dari inspeksi log eksekusi dan aturan validitas target pada simulator, sehingga bertujuan menonjolkan pola dominan.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{images/nav-tugas/fig_failmode_rootcause_matrix_2d_color_clean_v4.pdf}
+  \caption{Matriks Kualitatif \textit{Failure Mode} $\times$ \textit{Root Cause} untuk Mengidentifikasi Akar Penyebab Dominan pada \textit{Fail Tasks}.}
+  \label{fig:failmode_rootcause_matrix}
+\end{figure}
+
+Secara umum, F1--F2 paling sering berasosiasi dengan ketidakvalidan target aksi dan batasan interaksi lingkungan, sedangkan F3 lebih dipengaruhi oleh ketidakvalidan
+target penempatan dan isu verifikasi keberhasilan.
+Adapun F4 didominasi oleh ambiguitas instruksi yang menghambat \textit{grounding} dan pemilihan target aksi secara deterministik.
+Benchmark modern untuk agen berbasis LLM juga menekankan bahwa kegagalan dapat berasal dari berbagai kategori error (mis.\ \textit{planning error} dan \textit{affordance error}),
+sehingga diagnosis komponen menjadi penting untuk memahami bottleneck end-to-end \parencite{li2024eai,shi2024opex}.
+Selain itu, studi terkini pada \textit{embodied instruction following} menunjukkan bahwa \textit{grounding} keterampilan lintas domain dan dekomposisi instruksi berpengaruh terhadap
+keterlaksanaan tindakan di lingkungan target \parencite{shin2024semgro,cohen2024rlg}.
+
+Temuan \textit{fail tasks} dapat dimanfaatkan sebagai sinyal untuk meningkatkan kualitas kandidat instruksi dan reliabilitas evaluasi melalui \textit{quality gate}:
+(i) filter berbasis validitas aksi untuk instruksi \textit{pick up/retrieve} agar hanya target yang memenuhi prasyarat aksi yang dipilih;
+(ii) validasi \textit{reachability} sebelum finalisasi instruksi (dan \textit{resampling} bila gagal);
+(iii) \textit{whitelist} permukaan/\textit{receptacle} yang valid untuk aksi penempatan agar verifikasi konsisten; serta
+(iv) normalisasi instruksi ambigu menjadi target eksplisit dan terverifikasi untuk mengurangi kegagalan akibat \textit{grounding ambiguity}
+\parencite{shi2024opex,shin2024semgro,cohen2024rlg}.
+
+\vspace{0.5em}
+
+\section{Evaluasi \textit{Code-Switching} Indonesia--Inggris}
+\label{sec:cs_evaluation}
+
+\vspace{0.5em}
+
+\subsection{Protokol Pelabelan Bahasa dan Aturan Agregasi}
+\label{subsec:protocol_lid_agg}
+
+Setiap instruksi ditokenisasi menjadi urutan token secara konsisten pada seluruh dataset. Tokenisasi mencakup pemisahan tanda baca sebagai token tersendiri karena keputusan ini memengaruhi metrik berbasis urutan, khususnya metrik yang menghitung perubahan bahasa antar token bertetangga. Setelah tokenisasi, setiap token diberi label bahasa $\in \{\text{ID},\text{EN},\text{UNK}\}$ menggunakan skema \textit{back-off} bertahap yang memprioritaskan keputusan deterministik agar proses pelabelan stabil dan mudah direproduksi.
+
+Pada tahap pertama, token diberi label ID apabila ditemukan pada kamus Bahasa Indonesia dan diberi label EN apabila ditemukan pada kamus Bahasa Inggris. Apabila sebuah token muncul pada kedua kamus (kasus ambigu), label ditentukan dengan aturan \textit{tie-break} yang ditetapkan pada implementasi agar keputusan tetap deterministik. Pada tahap kedua, apabila token tidak tercakup pada kedua kamus, token diprediksi menggunakan model \textit{Language Identification} (LangID). Prediksi hanya diterima sebagai ID atau EN apabila skor keyakinan memenuhi ambang $\ge 0{,}8$. Terakhir, token yang tidak teridentifikasi oleh kamus dan tidak mencapai ambang keyakinan pada tahap LangID diberi label UNK.
+
+Token berlabel UNK merepresentasikan token yang tidak dapat dipetakan secara andal ke kelas ID atau EN, misalnya token \textit{domain-specific}, gabungan kata tanpa spasi, nama objek/ruangan yang tidak umum, simbol, atau token \textit{out-of-vocabulary}. Dalam dataset ini, contoh token yang termasuk kategori UNK antara lain \textit{"headsculpturehunting"}, \textit{"otherroom"}, dan \textit{"hosehead"}. Pada evaluasi metrik \textit{code-switching}, token UNK dikeluarkan dari urutan label bahasa sehingga seluruh metrik dihitung hanya berdasarkan urutan label yang terdiri dari ID dan EN. Keputusan ini mengurangi noise dari token ambigu, namun dapat menurunkan jumlah transisi yang terhitung apabila UNK muncul di sekitar titik perpindahan bahasa.
+
+Gambar~\ref{fig:token_label_timeline_switchpoints} mengilustrasikan pelabelan bahasa pada tingkat token beserta definisi titik perpindahan bahasa. Pada ilustrasi tersebut, titik perpindahan bahasa (ID$\leftrightarrow$EN) didefinisikan sebagai perubahan label pada pasangan token bertetangga setelah token UNK dikeluarkan dari urutan label. Secara formal, untuk urutan label hasil penyaringan $\mathbf{z}_i=(z_{i,1},\dots,z_{i,n_i})$ dengan $z_{i,j}\in\{\text{ID},\text{EN}\}$, titik perpindahan muncul pada posisi $j$ ketika $z_{i,j}\neq z_{i,j+1}$ untuk $j=1,\dots,n_i-1$. Sebagai contoh pada gambar, aliran token mentah berisi 8 token menjadi 7 token setelah UNK dihapus, lalu menghasilkan 3 titik perpindahan pada urutan ID/EN yang tersaring.
+\vspace{0.4em}
+
+\begin{figure}[H]
+    \centering
+    \resizebox{\linewidth}{!}{%
+    \begin{tikzpicture}[
+        x=0.9cm, y=0.9cm,
+        tok/.style={draw=black!35, rounded corners=1pt, minimum width=1.35cm, minimum height=0.62cm, font=\scriptsize, align=center},
+        idtok/.style={tok, fill=oiGreen!18},
+        entok/.style={tok, fill=oiBlue!16},
+        unktok/.style={tok, fill=gray!18},
+        sw/.style={draw=oiVermilion, line width=0.9pt, dashed}
+    ]
+        % Raw token sequence (with UNK kept)
+        \node[font=\scriptsize\bfseries, anchor=east] at (-0.3,1.7) {Raw token stream};
+        \node[idtok]  (r1) at (1,1.7) {ambil\\ID};
+        \node[entok]  (r2) at (2.6,1.7) {the\\EN};
+        \node[entok]  (r3) at (4.2,1.7) {blue\\EN};
+        \node[entok]  (r4) at (5.8,1.7) {towel\\EN};
+        \node[idtok]  (r5) at (7.4,1.7) {di\\ID};
+        \node[entok]  (r6) at (9.0,1.7) {bathroom\\EN};
+        \node[unktok] (r7) at (10.6,1.7) {otherroom\\UNK};
+        \node[entok]  (r8) at (12.2,1.7) {now\\EN};
+
+        % Filtered token stream (UNK removed)
+        \node[font=\scriptsize\bfseries, anchor=east] at (-0.3,0.35) {Filtered stream (ID/EN)};
+        \node[idtok]  (f1) at (1,0.35) {ambil\\ID};
+        \node[entok]  (f2) at (2.6,0.35) {the\\EN};
+        \node[entok]  (f3) at (4.2,0.35) {blue\\EN};
+        \node[entok]  (f4) at (5.8,0.35) {towel\\EN};
+        \node[idtok]  (f5) at (7.4,0.35) {di\\ID};
+        \node[entok]  (f6) at (9.0,0.35) {bathroom\\EN};
+        \node[entok]  (f7) at (10.6,0.35) {now\\EN};
+
+        % Switch points after UNK removal
+        \draw[sw] (1.8,-0.15) -- (1.8,0.85);
+        \node[font=\scriptsize, text=oiVermilion, anchor=south] at (1.8,0.88) {ID$\rightarrow$EN};
+
+        \draw[sw] (6.6,-0.15) -- (6.6,0.85);
+        \node[font=\scriptsize, text=oiVermilion, anchor=south] at (6.6,0.88) {EN$\rightarrow$ID};
+
+        \draw[sw] (8.2,-0.15) -- (8.2,0.85);
+        \node[font=\scriptsize, text=oiVermilion, anchor=south] at (8.2,0.88) {ID$\rightarrow$EN};
+
+        % Legend
+        \node[idtok, minimum width=0.95cm, minimum height=0.45cm] at (2.0,-0.65) {};
+        \node[font=\scriptsize, anchor=west] at (2.55,-0.65) {ID token};
+        \node[entok, minimum width=0.95cm, minimum height=0.45cm] at (4.8,-0.65) {};
+        \node[font=\scriptsize, anchor=west] at (5.35,-0.65) {EN token};
+        \node[unktok, minimum width=0.95cm, minimum height=0.45cm] at (7.6,-0.65) {};
+        \node[font=\scriptsize, anchor=west] at (8.15,-0.65) {UNK token};
+        \draw[sw] (10.25,-0.65) -- (10.95,-0.65);
+        \node[font=\scriptsize, anchor=west] at (11.05,-0.65) {switch point};
+
+        % Figure note
+        \node[font=\scriptsize, text=gray!70, align=center] at (6.6,-1.30)
+        {Transition counting is performed on the filtered ID/EN sequence (UNK excluded).};
+    \end{tikzpicture}
+    }
+    \caption{Linimasa Pelabelan Bahasa Tingkat Token dan Titik Perpindahan Bahasa.}
+    \label{fig:token_label_timeline_switchpoints}
+\end{figure}
+
+Evaluasi membedakan metrik yang bersifat global dan metrik yang sensitif terhadap urutan token. Metrik berbasis komposisi bahasa dihitung pada tingkat korpus untuk merepresentasikan distribusi global penggunaan bahasa Indonesia dan Inggris. Sebaliknya, metrik berbasis transisi dan struktur lokal dihitung per-\textit{utterance} karena bergantung pada urutan token di dalam instruksi, kemudian dirangkum dengan statistik agregat seperti rata-rata, median, dan kuartil. Pemisahan prosedur ini penting agar karakteristik lokal tidak terdistorsi apabila urutan token dari banyak instruksi digabung begitu saja.
+
+Untuk menghindari bias akibat pemotongan instruksi, transisi bahasa tidak dihitung melintasi batas \textit{utterance}. Artinya, jumlah transisi hanya dihitung di dalam satu instruksi, dan batas antar instruksi diperlakukan sebagai pemutus urutan. Jika seluruh instruksi digabung menjadi satu rangkaian panjang, perubahan label bahasa pada pertemuan akhir instruksi $i$ dan awal instruksi $i{+}1$ dapat keliru terhitung sebagai transisi, padahal perubahan tersebut merupakan artefak agregasi, bukan fenomena \textit{code-switching} di dalam instruksi yang sama.
+
+Sebagai ilustrasi teknis, Gambar~\ref{fig:dummy_xy_iindex_aggregation} menampilkan visualisasi untuk memperlihatkan relasi antara panjang \textit{utterance} efektif dan intensitas perpindahan bahasa per-\textit{utterance}, sekaligus perbedaan level agregasi yang benar dan yang bias.
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[
+            width=\linewidth,
+            height=0.56\linewidth,
+            xmin=0, xmax=40,
+            ymin=0, ymax=0.95,
+            xlabel={Effective \textit{Utterance} Length $(n_i - 1)$},
+            ylabel={Per-\textit{Utterance} \textit{I-index} $(I_i)$},
+            axis line style={black!70},
+            tick style={black!70},
+            grid=major,
+            grid style={gray!30},
+            minor grid style={gray!15},
+            minor x tick num=1,
+            minor y tick num=1,
+            ytick distance=0.1,
+            tick label style={font=\small},
+            label style={font=\small},
+            legend style={
+                font=\small,
+                at={(0.02,0.98)},
+                anchor=north west,
+                draw=black!20,
+                fill=white,
+                fill opacity=0.85,
+                text opacity=1,
+                rounded corners=1.5pt
+            },
+            clip=false
+        ]
+            \addplot+[
+                only marks,
+                mark=*,
+                mark size=1.8pt,
+                color=oiBlue,
+                fill=oiBlue!70,
+                fill opacity=0.55,
+                draw opacity=0.8
+            ] coordinates {
+                (3,0.18) (4,0.34) (5,0.12) (6,0.40) (7,0.26) (8,0.47)
+                (9,0.31) (10,0.52) (11,0.29) (12,0.57) (13,0.35) (14,0.60)
+                (16,0.41) (18,0.63) (20,0.45) (22,0.66) (25,0.49) (28,0.70)
+                (32,0.55) (36,0.74)
+            };
+            \addlegendentry{Illustrative \textit{Utterance} Samples}
+
+            \addplot+[domain=0:40, samples=2, very thick, color=oiGreen, dashed] {0.43};
+            \addlegendentry{$\overline{I}_{\text{utt}}$ (Per-\textit{Utterance} Mean)}
+
+            \addplot+[domain=0:40, samples=2, very thick, color=oiBlue, dash dot] {0.40};
+            \addlegendentry{$I_w$ (Weighted Aggregation, No Cross-Boundary Transitions)}
+
+            \addplot+[domain=0:40, samples=2, very thick, color=oiVermilion, densely dotted] {0.48};
+            \addlegendentry{$I_{\text{concat}}$ (Biased Under Corpus Concatenation)}
+
+            \node[
+                font=\scriptsize,
+                anchor=west,
+                fill=white,
+                fill opacity=0.9,
+                text opacity=1,
+                inner sep=2pt,
+                rounded corners=1pt,
+                draw=black!20
+            ]
+            at (axis cs:23,0.505) {$\Delta_{\text{boundary}} = I_{\text{concat}} - I_w$};
+        \end{axis}
+    \end{tikzpicture}
+    \caption{Ilustrasi Agregasi \textit{I-index} Per-\textit{Utterance} dan Efek Bias Lintas Batas.}
+    \label{fig:dummy_xy_iindex_aggregation}
+\end{figure}
+
+\subsection{Statistik Dasar Dataset}
+\label{subsec:basic_stats}
+
+Dataset yang digunakan pada evaluasi ini terdiri dari 506 \textit{utterance} dengan total 12.881 token, dengan definisi token mengikuti aturan tokenisasi pada Subbab~\ref{subsec:protocol_lid_agg} termasuk pemisahan tanda baca sebagai token tersendiri. Rata-rata panjang instruksi adalah sekitar 25,46 token per \textit{utterance}. Berdasarkan prosedur pelabelan bahasa tingkat token, sebanyak 12.510 token berhasil terklasifikasi sebagai bahasa ID atau EN, sedangkan 371 token dilabeli UNK. Dengan demikian, cakupan pelabelan pada tingkat token adalah 97,12\% dan proporsi token UNK adalah 2,88\%. Ringkasan statistik dasar disajikan pada Tabel~\ref{tab:basic_stats} dan komposisi token divisualisasikan pada Gambar~\ref{fig:basic_stats_tokens}.
+
+Pada token yang terklasifikasi (ID/EN), distribusi bahasa menunjukkan dominasi token berbahasa Inggris. Secara agregat, terdapat 9.365 token EN dan 3.145 token ID pada token berlabel, yang setara dengan proporsi EN 74,86\% dan ID 25,14\%. Komposisi ini menjadi konteks untuk membaca metrik global (keseimbangan dan derajat pencampuran) sekaligus metrik lokal yang menangkap seberapa aktif perpindahan bahasa terjadi di dalam instruksi.
+
+\begin{table*}[t]
+\centering
+\caption{Ringkasan Statistik Dasar Dataset}
+\label{tab:basic_stats}
+\fontsize{10}{12}\selectfont
+\begin{tabularx}{\textwidth}{@{}l r X@{}}
+\toprule
+\textbf{Statistik} & \textbf{Nilai} & \textbf{Catatan} \\
+\midrule
+Jumlah \textit{utterance} & 506 & Total instruksi pada dataset. \\
+Total token & 12.881 & Total token hasil tokenisasi (termasuk tanda baca). \\
+Rata-rata token per \textit{utterance} & 25{,}46 & $12.881/506$. \\
+Token berlabel (ID/EN) & 12.510 & Token terklasifikasi ID/EN. \\
+Token UNK & 371 & Token tidak terklasifikasi sebagai ID/EN. \\
+Cakupan pelabelan & 97{,}12\% & $12.510/12.881$. \\
+Proporsi UNK & 2{,}88\% & $371/12.881$. \\
+\midrule
+Token EN / ID (pada token berlabel) & 9.365 / 3.145 & Komposisi pada token ID/EN. \\
+Proporsi EN / ID (pada token berlabel) & 74{,}86\% / 25{,}14\% & Komposisi relatif pada token ID/EN. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/csideng/vis_basic_stats_stackedbar_2col_span.pdf}
+    \caption{Komposisi Token Dataset Berdasarkan Label Bahasa (EN, ID, UNK).}
+    \label{fig:basic_stats_tokens}
+\end{figure}
+
+\subsection{Keseimbangan Bahasa menggunakan \textit{M-index} dan \textit{Language Entropy}}
+\label{subsec:mindex_entropy}
+
+Keseimbangan distribusi bahasa pada tingkat korpus dievaluasi menggunakan \textit{M-index} dan \textit{language entropy}. Secara konseptual, \textit{M-index} merepresentasikan derajat keseimbangan proporsi dua bahasa, sedangkan \textit{language entropy} mengukur keragaman distribusi bahasa dan mencapai nilai maksimum ketika kedua bahasa memiliki proporsi yang sama. Kedua metrik ini dihitung pada tingkat korpus dengan menggunakan token berlabel (ID/EN).
+
+Pada dataset ini, \textit{M-index} bernilai 0,603579 dan \textit{language entropy} bernilai 0,813488 bit. Nilai tersebut sejalan dengan dominasi bahasa Inggris, namun tetap menunjukkan keragaman yang relatif tinggi karena bahasa Indonesia hadir dalam porsi yang tidak kecil pada token berlabel. Gambar~\ref{fig:mindex_entropy_vs_pen} memvisualisasikan perilaku kedua metrik sebagai fungsi proporsi EN dan menempatkan titik observasi dataset dalam konteks tersebut.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/csideng/vis_mindex_entropy_vs_pen_hatchet_v4_en_2col_span.pdf}
+    \caption{Perilaku \textit{M-index} dan \textit{Language Entropy} sebagai Fungsi Proporsi Token EN, dengan Zona Heuristik Mendekati Seimbang.}
+    \label{fig:mindex_entropy_vs_pen}
+\end{figure}
+
+\subsection{Derajat Pencampuran menggunakan \textit{Code-Mixing Index}}
+\label{subsec:cmi}
+
+Derajat pencampuran bahasa diringkas menggunakan \textit{Code-Mixing Index} (CMI), yang secara intuitif menggambarkan porsi bahasa non-dominan dalam korpus atau dalam sebuah instruksi. Pada kasus dua bahasa, CMI berada pada rentang 0 hingga 50; nilai yang lebih tinggi menunjukkan porsi bahasa non-dominan yang lebih besar. Dalam evaluasi ini, CMI dihitung pada token berlabel (ID/EN) sehingga konsisten dengan definisi proporsi bahasa setelah UNK dikeluarkan.
+
+Hasil evaluasi menunjukkan CMI pada tingkat korpus sebesar 25,1399, sedangkan rata-rata CMI pada tingkat \textit{utterance} adalah 25,1511. Nilai sekitar 25 mengindikasikan bahwa bahasa non-dominan (ID) muncul sekitar seperempat dari token berlabel, sehingga dataset bersifat EN-dominan tetapi tetap mempertahankan keberadaan token Indonesia yang bermakna. Distribusi CMI per-\textit{utterance} diringkas melalui fungsi kuantil pada Gambar~\ref{fig:cmi_quantilefunction}, yang membantu melihat variasi pencampuran antar instruksi tanpa mengandalkan detail rumus.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/csideng/vis_cmi_quantilefunction_final_v5_legendcolormatch_2col_span.pdf}
+    \caption{Fungsi Kuantil CMI per-\textit{Utterance} dengan Referensi Rata-Rata dan Nilai Korpus.}
+    \label{fig:cmi_quantilefunction}
+\end{figure}
+
+\subsection{Intensitas Perpindahan Bahasa menggunakan \textit{I-index}}
+\label{subsec:iindex}
+
+Intensitas perpindahan bahasa diukur menggunakan \textit{I-index}, yang secara konseptual merepresentasikan proporsi pasangan token bertetangga yang berbeda bahasa (ID$\leftrightarrow$EN) di dalam sebuah instruksi. Metrik ini dihitung per-\textit{utterance} pada urutan label ID/EN setelah token UNK dikeluarkan, kemudian dirangkum pada tingkat dataset menggunakan rata-rata per-\textit{utterance} serta agregasi berbobot berdasarkan panjang instruksi.
+
+Pada dataset ini, rata-rata \textit{I-index} per-\textit{utterance} adalah 0,383364 dan nilai tertimbang pada tingkat korpus adalah 0,376624. Kedua nilai yang berdekatan menunjukkan bahwa pembobotan berdasarkan panjang instruksi tidak mengubah estimasi intensitas perpindahan secara substansial. Secara interpretatif, sekitar 38\% pasangan token bertetangga pada urutan ID/EN merupakan transisi antar bahasa, sehingga dataset tidak hanya menampilkan pencampuran token, tetapi juga kaya akan perpindahan bahasa di dalam instruksi. Ringkasan distribusi \textit{I-index} divisualisasikan pada Gambar~\ref{fig:iindex_cdf} untuk memperlihatkan variasi antar instruksi.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/csideng/vis_iindex_cdf_colorful_v4_median_rb_2col_span.pdf}
+    \caption{Ringkasan Distribusi \textit{I-index} (CDF Berbasis Kuantil) dengan Referensi Rata-Rata dan Nilai Tertimbang.}
+    \label{fig:iindex_cdf}
+\end{figure}
+
+\subsection{Struktur \textit{Span} menggunakan \textit{Span Entropy}, \textit{Burstiness}, dan \textit{Memory}}
+\label{subsec:span_metrics}
+
+Untuk memahami bentuk switching secara lokal, urutan label bahasa pada tingkat token dipetakan menjadi \textit{span} monolingual, yaitu segmen token berturut-turut dengan label bahasa yang sama. Dari representasi ini, evaluasi merangkum keragaman panjang span, tingkat ketidak-ekstreman variasi panjang span, serta keterkaitan panjang span bertetangga. Seluruh metrik berbasis span dihitung pada urutan label ID/EN setelah token UNK dikeluarkan, sehingga konsisten dengan protokol evaluasi. Penghapusan token UNK dapat mengubah struktur lokal secara ringan, misalnya membuat dua span berbahasa sama menjadi bersebelahan dan kemudian tergabung, sehingga interpretasi metrik berbasis span mempertimbangkan kondisi ini.
+
+Keragaman panjang span diringkas menggunakan \textit{span entropy}. Pada dataset ini, rata-rata \textit{span entropy} adalah 1,536138 bit dengan median 1,551098 bit, yang mengindikasikan bahwa panjang span bervariasi dan switching tidak selalu berbentuk selang-seling satu token. Variasi \textit{span entropy} antar instruksi ditunjukkan pada Gambar~\ref{fig:spanentropy_cdf}. Tingkat \textit{burstiness} rata-rata adalah $-0,040680$ yang berada dekat nol, sehingga variasi panjang span secara umum tidak bersifat ekstrem. Sementara itu, \textit{memory} rata-rata adalah $-0,304733$ yang bernilai negatif, menunjukkan kecenderungan \textit{anti-correlation} di mana span yang lebih panjang cenderung diikuti span berikutnya yang lebih pendek (dan sebaliknya). Ringkasan sebaran \textit{burstiness} dan \textit{memory} ditampilkan pada Gambar~\ref{fig:burstiness_memory_summary}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/csideng/vis_spanentropy_cdf_v6_best_2col_span.pdf}
+    \caption{Ringkasan Distribusi \textit{Span Entropy} pada Tingkat \textit{Utterance}.}
+    \label{fig:spanentropy_cdf}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/csideng/vis_burstiness_memory_summary_v6_best_2col_span.pdf}
+    \caption{Ringkasan Sebaran \textit{Burstiness} dan \textit{Memory} pada Tingkat \textit{Utterance}.}
+    \label{fig:burstiness_memory_summary}
+\end{figure}
+
+\subsection{Kualitas Titik \textit{Switch} menggunakan \textit{T-index}}
+\label{subsec:tindex}
+
+Selain mengukur intensitas dan struktur perpindahan bahasa, evaluasi ini menilai kualitas titik perpindahan menggunakan \textit{T-index} berbasis skor log-probabilitas dari model terjemahan mesin pada konteks titik \textit{switch}. Skor ini merepresentasikan preferensi model terhadap keluaran terjemahan pada konteks titik perpindahan dan dirangkum sebagai nilai rata-rata pada seluruh titik \textit{switch} di korpus. Karena skala skor log-probabilitas bergantung pada model dan domain, \textit{T-index} diperlakukan sebagai indikator komparatif internal untuk membaca sebaran kualitas switching.
+
+Berdasarkan evaluasi pada dataset, diperoleh \textit{T-index} sebesar $-0,5985$. Distribusi skor pada titik \textit{switch} ditampilkan pada Gambar~\ref{fig:tindex_scorecdf}, termasuk pemisahan berdasarkan arah perpindahan (ID$\rightarrow$EN dan EN$\rightarrow$ID) untuk melihat potensi asimetri kualitas. Gambar~\ref{fig:tindex_density_vs_quality} selanjutnya menganalisis hubungan kualitas titik \textit{switch} terhadap kepadatan \textit{switch} pada tingkat \textit{utterance}, sehingga dapat diperiksa apakah instruksi dengan switching sangat sering cenderung menghasilkan titik perpindahan yang relatif kurang natural menurut indikator model terjemahan atau sebaliknya.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/csideng/vis_tindex_scorecdf_v3_clean_2col_span.pdf}
+    \caption{Distribusi Skor Log-Probabilitas pada Titik \textit{Switch} untuk \textit{T-index}.}
+    \label{fig:tindex_scorecdf}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/csideng/vis_tindex_density_vs_quality_v6_smalllabels_2col_span.pdf}
+    \caption{Kualitas Titik \textit{Switch} terhadap Kepadatan \textit{Switch} pada Tingkat \textit{Utterance}.}
+    \label{fig:tindex_density_vs_quality}
+\end{figure}
+
+\subsection{Ringkasan Hasil dan Profil \textit{Code-Switching} Dataset}
+\label{subsec:summary_and_profile}
+
+Tabel~\ref{tab:cs_metrics_summary} merangkum metrik utama evaluasi \textit{code-switching} ID--EN pada dataset. Secara global, distribusi bahasa pada token berlabel menunjukkan dominasi bahasa Inggris (74,86\%) dengan kehadiran bahasa Indonesia yang tetap substantif (25,14\%), yang konsisten dengan nilai \textit{M-index} 0,603579 dan \textit{language entropy} 0,813488 bit. Derajat pencampuran bahasa yang diringkas oleh CMI berada di kisaran 25 baik pada tingkat korpus maupun rata-rata per-\textit{utterance}, mengindikasikan bahwa pencampuran tidak hanya disebabkan oleh sedikit instruksi ekstrem. Pada tingkat lokal, \textit{I-index} menunjukkan intensitas switching yang cukup tinggi, dengan sekitar 38\% pasangan token bertetangga merupakan transisi antar bahasa, sehingga dataset kaya akan switching \textit{intra-utterance}. Analisis berbasis span menunjukkan \textit{chunking} monolingual yang moderat, variasi panjang span yang beragam, \textit{burstiness} yang tidak ekstrem, serta kecenderungan \textit{anti-correlation} pada span bertetangga. Terakhir, kualitas titik \textit{switch} menurut indikator model terjemahan diringkas oleh \textit{T-index} sebesar $-0,5985$, yang digunakan terutama sebagai pembacaan komparatif internal terhadap sebaran kualitas switching.
+
+Sebagai batasan, seluruh metrik switching dihitung setelah token UNK dikeluarkan untuk mengurangi noise, sehingga jumlah transisi terhitung dapat sedikit berkurang apabila UNK muncul di sekitar titik switching. Selain itu, interpretasi \textit{T-index} bersifat \textit{model-dependent}; untuk menilai kewajaran switching secara lebih kuat, indikator ini dapat dilengkapi dengan pembanding model lain atau evaluasi manusia pada pekerjaan lanjutan.
+
+\begin{table*}[!t]
+\centering
+\caption{Ringkasan Metrik Evaluasi \textit{Code-Switching} ID--EN pada Dataset}
+\label{tab:cs_metrics_summary}
+\fontsize{10}{12}\selectfont
+\setlength{\tabcolsep}{6pt}
+\renewcommand{\arraystretch}{1.05}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}X l r@{}}
+\toprule
+\textbf{Metrik} & \textbf{Level} & \textbf{Nilai} \\
+\midrule
+\multicolumn{3}{@{}l}{\textbf{A. Statistik Dasar}} \\
+Jumlah \textit{utterance} & Korpus & 506 \\
+Total token & Korpus & 12.881 \\
+Token berlabel (ID/EN) & Korpus & 12.510 \\
+Token \textbf{UNK} & Korpus & 371 \\
+Token EN / ID (pada token berlabel) & Korpus & 9.365 / 3.145 \\
+Proporsi EN / ID (pada token berlabel) & Korpus & 74,86\% / 25,14\% \\
+\addlinespace
+
+\multicolumn{3}{@{}l}{\textbf{B. Keseimbangan Bahasa (Global)}} \\
+$M$-index & Korpus & 0,603579 \\
+\textit{Language entropy} & Korpus & 0,813488 bit \\
+\addlinespace
+
+\multicolumn{3}{@{}l}{\textbf{C. Derajat Pencampuran}} \\
+CMI & Korpus & 25,1399 \\
+CMI & Per-utt (mean) & 25,1511 \\
+\addlinespace
+
+\multicolumn{3}{@{}l}{\textbf{D. Intensitas Perpindahan Bahasa}} \\
+$I$-index & Per-utt (mean) & 0,383364 \\
+$I$-index & Korpus (weighted) & 0,376624 \\
+\addlinespace
+
+\multicolumn{3}{@{}l}{\textbf{E. Struktur Lokal Berbasis \textit{Span}}} \\
+\textit{Span entropy} & Per-utt (mean) & 1,536138 bit \\
+\textit{Burstiness} & Per-utt (mean) & $-0,040680$ \\
+\textit{Memory} & Per-utt (mean) & $-0,304733$ \\
+\addlinespace
+
+\multicolumn{3}{@{}l}{\textbf{F. Kualitas Titik \textit{Switch} (indikator MT)}} \\
+\textit{T-index} & Korpus & $-0,5985$ \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/csideng/vis_cs_metrics_summary_profile_v1_2col_span.pdf}
+    \caption{Profil Ringkas Metrik \textit{Code-Switching} dalam Skala Ternormalisasi.}
+    \label{fig:cs_metrics_profile}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/csideng/vis_cmi_vs_iindex_hexbin_v4_ultraclean_2col_span.pdf}
+    \caption{Kepadatan CMI dan \textit{I-index} pada Tingkat \textit{Utterance}.}
+    \label{fig:cmi_vs_iindex_hexbin}
+\end{figure}
+
+\section{Representasi Segmentasi Aksi dan Konteks Visual pada Episode \textit{Long-Horizon}}
+\vspace{0.5em}
+
+\subsection{Unit Representasi: Episode, Subtugas, dan Segmen Aksi}
+Satu episode \textit{long-horizon} terdiri dari instruksi global yang secara operasional dapat diuraikan menjadi beberapa subtugas berorientasi target (misalnya mencapai beberapa objek secara berurutan). Untuk setiap subtugas target, trajektori navigasi dipadatkan menjadi urutan segmen $\{s_i\}_{i=1}^{m}$. Setiap segmen $s_i$ didefinisikan sebagai tuple pada Persamaan~\ref{eq:segment_tuple} yang merangkum rentang langkah, label aksi, serta ringkasan konteks visual pada interval tersebut.
+\begin{equation}
+s_i = \left(\textit{start}_i, \textit{end}_i, a_i, \mathcal{T}_i\right),
+\label{eq:segment_tuple}
+\end{equation}
+di mana $\textit{start}_i$ dan $\textit{end}_i$ menyatakan rentang indeks langkah pada trajektori, $a_i$ menyatakan label aksi pada segmen (misalnya \textit{move\_forward}, \textit{turn\_left}, \textit{turn\_right}), dan $\mathcal{T}_i$ menyatakan himpunan tag konteks visual (\textit{scene tags}) yang merangkum \textit{landmark}/ruang/objek dominan pada rentang segmen tersebut. Representasi ini berperan sebagai \textit{intermediate representation} yang menjembatani keluaran simulator (numerik dan bertaraf rendah) menuju instruksi bahasa natural (bilingual) yang tetap \textit{grounded}.
+\vspace{0.5em}
+
+\subsection{Skala Data dan Indikator Kompleksitas \textit{Long-Horizon}}
+Pada eksperimen ini diperoleh 401 episode unik (berbasis instruksi global) yang terurai menjadi 1096 subtugas berorientasi target. Total segmen yang terbentuk adalah 5253 segmen, dengan 265 target unik. Rata-rata jumlah segmen per subtugas adalah 4{,}79 (median 5; maksimum 21). Panjang segmen (dalam langkah) memiliki median 6, persentil ke-90 sebesar 25, dan maksimum 116 langkah. Ringkasan statistik skala data dan kompleksitas episode ditampilkan pada Tabel~\ref{tab:lhvln_stats_overall}.
+
+\begin{table}[H]
+\centering
+\caption{Ringkasan Statistik Representasi Segmen dan Kompleksitas Episode}
+\label{tab:lhvln_stats_overall}
+{\fontsize{10}{12}\selectfont
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{10pt}
+\begin{tabularx}{\textwidth}{@{} >{\raggedright\arraybackslash}X r @{}}
+\toprule
+\textbf{Metrik} & \textbf{Nilai} \\
+\midrule
+Jumlah episode unik (instruksi global) & 401 \\
+Jumlah subtugas berorientasi target & 1096 \\
+Jumlah segmen total & 5253 \\
+Jumlah target unik & 265 \\
+Rata-rata segmen per subtugas (median; maksimum) & 4{,}79 (5; 21) \\
+Panjang segmen (langkah): median; P90; maksimum & 6; 25; 116 \\
+Panjang horizon per episode (langkah): rata-rata; median; P90; maksimum & 155{,}77; 140; 268; 474 \\
+Jumlah tag konteks visual unik & 291 \\
+Tag unik per episode: rata-rata (median; maksimum) & 23{,}92 (23; 58) \\
+\bottomrule
+\end{tabularx}}
+\end{table}
+
+Panjang horizon episode dihitung sebagai $\textit{max\_end} - \textit{min\_start} + 1$ pada indeks langkah. Distribusi horizon pada Gambar~\ref{fig:horizon_dist_tail_bottom} menunjukkan nilai rata-rata 155{,}77 langkah dan median 140 langkah, dengan \textit{tail} yang menonjol pada P90 = 268 langkah hingga maksimum 474 langkah. Secara kuantitatif, terdapat 41 episode (10{,}22\%) pada wilayah \textit{tail} (horizon $\ge$ P90) dan 21 episode (5{,}24\%) pada horizon $\ge$ P95 (335 langkah). Pola ini memperkuat bahwa episode yang dibentuk memenuhi karakteristik \textit{long-horizon} dalam arti memiliki rentang langkah yang panjang serta variasi tingkat kesulitan antar-episode.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth, trim={0mm 2mm 0mm 6.2mm}, clip]{images/fig1_horizon_distribution_tail_bottom_color.pdf}
+\caption{Distribusi Panjang Horizon Episode dan \textit{Tail} (Horizon $\ge$ P90).}
+\label{fig:horizon_dist_tail_bottom}
+\end{figure}
+
+\subsection{Struktur Multitarget pada Episode \textit{Long-Horizon}}
+Struktur multi-tahap tercermin dari banyaknya target per episode. Distribusi jumlah target per episode adalah: 1 target (6{,}23\%), 2 target (31{,}67\%), 3 target (47{,}38\%), 4 target (12{,}72\%), 5 target (1{,}25\%), dan 6 target (0{,}75\%). Dominasi episode dengan 2--4 target menunjukkan bahwa mayoritas instruksi global memerlukan rangkaian pencapaian target berurutan, yang sejalan dengan tujuan pembangkitan dataset \textit{long-horizon}. Ringkasan distribusi tersebut disajikan pada Tabel~\ref{tab:targets_per_episode}.
+
+\begin{table}[H]
+\centering
+\caption{Distribusi Jumlah Target per Episode}
+\label{tab:targets_per_episode}
+{\fontsize{10}{12}\selectfont
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{10pt}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}} c r r @{}}
+\toprule
+\textbf{Jumlah Target} & \textbf{Jumlah Episode} & \textbf{Persentase} \\
+\midrule
+1 & 25  & 6{,}23\% \\
+2 & 127 & 31{,}67\% \\
+3 & 190 & 47{,}38\% \\
+4 & 51  & 12{,}72\% \\
+5 & 5   & 1{,}25\% \\
+6 & 3   & 0{,}75\% \\
+\bottomrule
+\end{tabular*}}
+\end{table}
+
+\subsection{Karakteristik Segmentasi Aksi}
+Segmentasi bertujuan memadatkan rangkaian aksi primitif menjadi unit instruksional yang lebih stabil secara semantik. Distribusi label aksi pada level segmen (Gambar~\ref{fig:action_label_dist_fig}) menunjukkan dominasi \textit{move\_forward} sebesar 59{,}91\%, diikuti \textit{turn\_right} (16{,}30\%) dan \textit{turn\_left} (16{,}24\%). Selain itu, terdapat variasi label \textit{make a left turn} (3{,}90\%) dan \textit{make a right turn} (3{,}66\%). Keberadaan variasi sinonim ini mengindikasikan perlunya normalisasi label pada pra-pemrosesan (misalnya pemetaan \textit{make a left/right turn} ke \textit{turn\_left/right}) agar konsisten dengan himpunan aksi yang digunakan pada pemodelan maupun evaluasi.
+
+\begin{table}[H]
+\centering
+\caption{Distribusi Label Aksi pada Segmen (Lima Label Teratas)}
+\label{tab:action_label_dist_table}
+{\fontsize{10}{12}\selectfont
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{10pt}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}} l r r @{}}
+\toprule
+\textbf{Label Aksi} & \textbf{Jumlah Segmen} & \textbf{Persentase} \\
+\midrule
+\textit{move\_forward}      & 3147 & 59{,}91\% \\
+\textit{turn\_right}        & 856  & 16{,}30\% \\
+\textit{turn\_left}         & 853  & 16{,}24\% \\
+\textit{make a left turn}   & 205  & 3{,}90\% \\
+\textit{make a right turn}  & 192  & 3{,}66\% \\
+\bottomrule
+\end{tabular*}}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth, trim={0mm 5.5mm 0mm 6.2mm}, clip]{images/fig2_action_label_distribution_color.pdf}
+\caption{Distribusi Label Aksi pada Level Segmen.}
+\label{fig:action_label_dist_fig}
+\end{figure}
+
+\subsection{Kekayaan Konteks Visual sebagai Pembatas \textit{Grounding}}
+Setiap segmen disertai tag konteks visual yang merangkum informasi lingkungan pada rentang langkah segmen tersebut. Pada dataset ini, hampir seluruh segmen memiliki tepat lima tag konteks visual (hanya satu segmen memiliki empat tag), sehingga representasi konteks bersifat konsisten antarsegmen. Secara agregat terdapat 291 tag unik. Pada level episode, jumlah tag unik memiliki rata-rata 23{,}92 (median 23) dan maksimum 58. Distribusi beserta kurva kumulatif (CDF) pada Gambar~\ref{fig:unique_tags_cdf} memperlihatkan bahwa 90\% episode memiliki tag unik $\le$ 36 (P90 = 36) dan 95\% episode memiliki tag unik $\le$ 41 (P95 = 41). Dengan demikian, episode \textit{long-horizon} tidak hanya panjang dari sisi langkah, tetapi juga kaya variasi konteks lintas ruang dan \textit{landmark}.
+
+Dalam sintesis instruksi bilingual berbasis LLM, tag konteks visual berfungsi sebagai \textit{constraint} eksplisit untuk menjaga agar instruksi yang dihasilkan tetap \textit{grounded}, yakni hanya merujuk pada ruang/\textit{landmark}/objek yang benar-benar teramati pada episode. Pembatasan eksplisit ini relevan untuk menekan risiko \textit{hallucination} berupa penambahan detail lingkungan yang tidak didukung oleh observasi visual episode.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth, trim={0mm 2mm 0mm 6.3mm}, clip]{images/fig3_unique_tags_distribution_color_cdf.pdf}
+\caption{Distribusi Jumlah \textit{Unique Scene Tags} per Episode dan Kurva CDF.}
+\label{fig:unique_tags_cdf}
+\end{figure}
+
+\subsection{Analisis Kompleksitas Episode pada Ruang Fitur 3D dan Proyeksi 2D}
+Untuk memahami variasi kompleksitas episode secara kompak, setiap episode diproyeksikan ke ruang fitur 3D: panjang horizon (sumbu-$x$), jumlah segmen (sumbu-$y$), dan jumlah target (sumbu-$z$). Gambar~\ref{fig:complexity_3d} menampilkan sebaran episode dengan pewarnaan berdasarkan jumlah target. Secara statistik, korelasi Pearson menunjukkan hubungan positif yang kuat antara horizon dan jumlah segmen ($r=0{,}780$), serta korelasi positif antara horizon dan jumlah target ($r=0{,}644$) dan antara segmen dan target ($r=0{,}569$). Artinya, episode dengan lebih banyak target cenderung memiliki horizon lebih panjang dan tersusun dari lebih banyak segmen, meskipun variasi struktur jalur tetap muncul pada target yang sama.
+
+Agar interpretasi pada dokumen statis lebih mudah, proyeksi 2D ditampilkan secara terpisah: horizon vs segmen (Gambar~\ref{fig:proj_xy}), horizon vs target (Gambar~\ref{fig:proj_xz}), dan segmen vs target (Gambar~\ref{fig:proj_yz}). Proyeksi tersebut membantu mengidentifikasi (i) episode dengan horizon panjang yang juga memiliki banyak segmen (wilayah kanan-atas pada \textit{projection} XY), serta (ii) kecenderungan peningkatan horizon/segmen seiring bertambahnya target, tanpa meniadakan adanya tumpang tindih (\textit{overlap}) antar-kelas target.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth, trim={0mm 5mm 0mm 20mm}, clip]{images/fig4_episode_complexity_3d_color.pdf}
+\caption{Kompleksitas Episode pada Ruang Fitur 3D (Diwarnai Berdasarkan Jumlah Target).}
+\label{fig:complexity_3d}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{images/fig4_xy_projection_color.pdf}
+\caption{\textit{Projection} XY: Horizon terhadap Jumlah Segmen (Diwarnai Berdasarkan Jumlah Target).}
+\label{fig:proj_xy}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{images/fig4_xz_projection_color.pdf}
+\caption{\textit{Projection} XZ: Horizon terhadap Jumlah Target.}
+\label{fig:proj_xz}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{images/fig4_yz_projection_color.pdf}
+\caption{\textit{Projection} YZ: Jumlah Segmen terhadap Jumlah Target.}
+\label{fig:proj_yz}
+\end{figure}
+
+\subsection{Ilustrasi Kualitatif Segmentasi Aksi per Subtugas}
+Selain ringkasan kuantitatif, visualisasi timeline segmentasi memperlihatkan bagaimana segmen aksi terbentuk dan tersusun per subtugas target. Pada setiap timeline, sumbu-$x$ menyatakan indeks langkah, sumbu-$y$ menyatakan urutan target/subtugas, warna merepresentasikan label aksi, dan anotasi singkatan (mis. MF, TL, TR) memudahkan pembacaan pola aksi. Tujuh contoh pada Gambar~\ref{fig:timeline_ex1}--\ref{fig:timeline_ex7} dipilih untuk merepresentasikan variasi horizon dari kuantil rendah hingga mendekati P90.
+
+Secara ringkas, ketujuh contoh tersebut memperlihatkan beberapa pola penting: (i) episode dengan horizon moderat dapat memiliki jumlah segmen yang cukup tinggi jika terjadi banyak pergantian aksi belok, (ii) episode dengan horizon panjang dapat terbentuk dari segmen yang relatif sedikit namun berdurasi panjang (kompresi kuat), dan (iii) pada episode mendekati \textit{tail}, satu target tertentu dapat mendominasi jumlah segmen sehingga memperbesar kompleksitas eksekusi subtugas.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{images/fig5_timeline_example_01.pdf}
+\caption{Contoh 1 Timeline Segmentasi Aksi per Target (Horizon 72, Segmen 9, Target 3).}
+\label{fig:timeline_ex1}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{images/fig5_timeline_example_02.pdf}
+\caption{Contoh 2 Timeline Segmentasi Aksi per Target (Horizon 103, Segmen 13, Target 3).}
+\label{fig:timeline_ex2}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{images/fig5_timeline_example_03.pdf}
+\caption{Contoh 3 Timeline Segmentasi Aksi per Target (Horizon 129, Segmen 11, Target 3).}
+\label{fig:timeline_ex3}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{images/fig5_timeline_example_04.pdf}
+\caption{Contoh 4 Timeline Segmentasi Aksi per Target (Horizon 146, Segmen 9, Target 3).}
+\label{fig:timeline_ex4}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{images/fig5_timeline_example_05.pdf}
+\caption{Contoh 5 Timeline Segmentasi Aksi per Target (Horizon 163, Segmen 11, Target 3).}
+\label{fig:timeline_ex5}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{images/fig5_timeline_example_06.pdf}
+\caption{Contoh 6 Timeline Segmentasi Aksi per Target (Horizon 193, Segmen 7, Target 3).}
+\label{fig:timeline_ex6}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{images/fig5_timeline_example_07.pdf}
+\caption{Contoh 7 Timeline Segmentasi Aksi per Target (Horizon 267, Segmen 17, Target 3).}
+\label{fig:timeline_ex7}
+\end{figure}
+
+\subsection{Pemeriksaan Konsistensi Internal dan Keterlacakan}
+Agar hasil dapat dipertanggungjawabkan secara ilmiah, dilakukan pemeriksaan konsistensi internal dan keterlacakan sebagai berikut:
+\begin{enumerate}[label=(\arabic*), left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt]
+  \item Konsistensi kardinalitas: jumlah segmen total pada level segmen konsisten dengan penjumlahan jumlah segmen pada level episode (5253 segmen), dan jumlah subtugas konsisten dengan pasangan unik episode--target (1096 subtugas).
+  \item Integritas referensial: setiap segmen dapat ditelusuri kembali ke subtugas target dan episode induknya melalui \textit{identifier} episode/subtugas, sehingga tidak terdapat segmen ``yatim'' (\textit{orphan segments}).
+  \item Konsistensi agregat: metrik ringkasan episode (misalnya horizon dan jumlah segmen) dapat dihitung ulang dari data \textit{segment-level} tanpa perbedaan.
+  \item Audit proses: jejak pembentukan subtugas menyimpan informasi rentang langkah dan instruksi subtugas, sehingga setiap instruksi dapat ditelusuri ke urutan segmen serta konteks visualnya.
+\end{enumerate}
+Pemeriksaan ini memastikan bahwa representasi hasil segmentasi dan konteks visual bersifat konsisten, dapat direproduksi, dan dapat diaudit.
+\vspace{0.5em}
+
+\subsection{Implikasi terhadap Evaluasi Navigasi dan Analisis \textit{Code-Switching}}
+Representasi subtugas target memungkinkan evaluasi yang lebih granular dibanding hanya menilai keberhasilan pada akhir episode. Metrik navigasi dapat dihitung per subtugas lalu diagregasi pada level episode, sehingga analisis kegagalan dapat dikaitkan dengan bagian trajektori yang spesifik (misalnya segmen belokan berulang atau perpindahan antar ruang). Pada sisi linguistik, instruksi bilingual yang disintesis dari representasi terstruktur yang sama memungkinkan evaluasi kualitas \textit{code-switching} (misalnya rasio peralihan bahasa, konsistensi referensi target, serta kewajaran titik \textit{switch}) secara lebih terkontrol, karena keluaran LLM dibatasi oleh rencana aksi dan konteks visual episode.
+\vspace{0.5em}

@@ -1,0 +1,36 @@
+=== Key values: Figure (A,B,C) Template Heterogeneity ===
+
+Language labeling (for this figure): lexicon-first heuristic + light morphology; unknowns default to EN.
+Note: This is intended for template/heterogeneity diagnostics, aligned with ID/EN-only switching analysis.
+
+Utterances: 506
+Alphabetic tokens total: 12881
+Token counts (ID/EN): ID=3255, EN=9626
+ID proportion: 0.2527
+EN proportion: 0.7473
+
+Clustering: KMeans on (signature n-grams + standardized metrics), K=7
+
+Cluster summary (ordered as plotted):
+  C   n   mean_len  mean_runs  mean_switch  mean_CMI  mean_I  mean_EN
+  C0  34     37.74      10.35         9.35     16.70   0.254    0.833
+  C1  32     21.69       5.19         4.19     17.23   0.205    0.828
+  C2 145     27.91      10.19         9.19     21.41   0.344    0.786
+  C3 149     24.46      12.00        11.00     25.71   0.472    0.743
+  C4  95     17.80       8.14         7.14     29.42   0.428    0.706
+  C5  18     36.33      18.22        17.22     29.70   0.486    0.702
+  C6  33     26.30      13.15        12.15     43.35   0.491    0.501
+
+Top collapsed run-signatures per cluster (I/E):
+  C0: IEIEIEIEIE (n=11), IEIEIEIE (n=10), IEIEIEIEIEIE (n=10)
+  C1: IEIEIE (n=24), IE (n=5), IEIE (n=3)
+  C2: IEIEIEIEIE (n=110), IEIEIEIEIEIE (n=22), IEIEIEIE (n=10)
+  C3: IEIEIEIEIEIE (n=131), IEIEIEIEIE (n=6), IEIEIEIEIEIEIE (n=6)
+  C4: IEIEIEIE (n=78), IEIEIEIEIE (n=9), IEIEIEIEI (n=3)
+  C5: IEIEIEIEIEIEIEIE (n=8), IEIEIEIEIEIEIEIEIE (n=5), IEIEIEIEIEIEIEIEIEIE (n=3)
+  C6: IEIEIEIEIEIEIE (n=19), IEIEIEIEIEIE (n=8), IEIEIEIEIE (n=4)
+
+Interpretation hints:
+• Panel (A): separated clusters indicate distinct surface templates (e.g., I→E slotting vs longer EN blocks).
+• Panel (B): different medians/spreads per cluster show heterogeneity hidden by corpus averages.
+• Panel (C): stable horizontal bands (periodic EN peaks) suggest slot-based, template-driven mixing.

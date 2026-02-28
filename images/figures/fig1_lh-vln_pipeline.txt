@@ -1,0 +1,5 @@
+ALT TEXT:
+Flowchart linking Environment (Habitat/HM3D/VLN-CE), NavGen planner, instruction generation with code-switch control, LLM-as-a-judge, and the Long-Horizon dataset. Arrows show data flow and traceable metadata outputs.
+
+CAPTION:
+LH-VLN and LLM-in-the-loop pipeline tying planning, instruction generation, and evaluation.

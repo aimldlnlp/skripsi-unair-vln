@@ -1,0 +1,301 @@
+\chapter{LAMPIRAN 4: setup.cpp dan setup.h}
+\section*{setup.h}
+\scriptsize
+\begin{verbatim}
+ /*
+#include <vector>
+#include <iostream>
+#include <stdlib.h>
+#include <math.h>
+#include "package.h"
+#include "out.h"
+#include "opmat.h"
+#include "OpenBlas/include/cblas.h"
+#include <string>
+//#include <fstream.h>
+*/
+
+#define PI 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679
+
+void set_setup(std::vector<int> S, std::vector<int> Latice, double *rout,double *g2out,double *gout);
+
+//c-%set_slice() paket untuk menampilkan hasil slice
+std::vector<std::vector<double> > set_slice(std::vector<double> dat, std::vector<int> S,int l,int k,int *ba,int *ko);
+
+//c-%set_dplot: untuk membuat data yang bisa di plot.
+void set_dplot(std::vector<double> dat,std::vector<int> S);
+\end{verbatim}
+\normalsize
+
+\section*{setup.cpp}
+\scriptsize
+\begin{verbatim}
+ //Memasukkan include paket
+
+#include "edft.h"
+#include "package.h"
+#include "out.h"
+#include "opmat.h"
+
+#include "setup.h"
+
+//c-Memasukkan definisi
+#define PI 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679
+
+//c-%set_setup
+void set_setup(std::vector<int> S, std::vector<int> Latice, double *rout, double *g2out,double *gout)
+{
+ //c-Cara cepat untuk mendefinisikan vektor dan matrik 
+ typedef std::vector<int> vector_int; 
+ typedef std::vector<double> vector_double;
+ typedef std::vector<vector_int> vector_vector;
+ typedef std::vector<vector_double> vector_vector_double;
+
+ int batas=pac_prod(S); //c-definisi %batas integer
+ vector_int ms(batas), m1(batas), m2(batas), m3(batas); //c- %ms, %m1, %m2, %m3 vektor integer
+
+ for (int i=0;i<batas;i++) //c-%ms(batas) o-ms=[0:prod(s)-1]
+  { 
+   ms[i]=i;
+  }
+
+ for (int i=0;i<batas;i++)
+  {
+   m1[i]=pac_rem(ms[i],S[0]); //o-rem(ms,S(1))
+   m2[i]=pac_rem(floor(ms[i]/S[0]),S[1]); //o-m2=rem()
+   m3[i]=pac_rem(floor(ms[i]/(S[0]*S[1])),S[2]);
+  }  
+// KeluarVector(m2);
+
+ //c-Membuat vector M menjadi sebuah matriks. //o-M=[m1,m2,m3]
+ vector_vector Mi; //c- %Mi matrix integer
+ Mi.push_back(m1); //c- memasukkan vektor m1 kedalam M
+ Mi.push_back(m2); //c-memasukkan vektor m2 kedalam M
+ Mi.push_back(m3); //c-memasukkan vektor m3 kedalam M
+// KeluarMatrixDouble(opmat_intodoub(Mi,Mi.size(),m1.size()),Mi.size(),m1.size());
+
+ vector_vector_double M; //c-deklarasi matriks %M double
+ M=opmat_transpose_double(opmat_intodoub(Mi,Mi.size(),m1.size()),Mi.size(),m1.size());
+// KeluarMatrixDouble(M,M.size(),Mi.size()); std::cout<<"\n \n";
+ 
+ //c-deklarasi vector baru
+ vector_int n1(batas),n2(batas),n3(batas); //c-%n1, %n2, %3 vektor integer.
+
+ n1=pac_besar(m1,S[0]);
+ n2=pac_besar(m2,S[1]);
+ n3=pac_besar(m3,S[2]);
+
+ //o-N=[n1,n2,n3]
+ vector_vector Ni; //c-%Ni matrix integer
+ Ni.push_back(n1); 
+ Ni.push_back(n2);
+ Ni.push_back(n3);
+// KeluarMatrix(Ni,Ni.size(),n1.size());
+
+ vector_vector_double N; //c-%N matriks double
+ N=opmat_transpose_double(opmat_intodoub(Ni,Ni.size(),n1.size()),Ni.size(),n1.size());  
+// KeluarMatrixDouble(N,N.size(),Ni.size());
+
+ vector_vector R; //c-%R matriks integer
+ R=pac_Diag(Latice);  //c-vektor %Lattice dimasukkan dalam matriks R 
+// KeluarMatrix(R,R.size(),R.size()); 
+
+
+//c-Memasukkan sampling poin R dan G 
+ vector_vector_double diS;
+ diS=opmat_inverse(pac_Diag(S)); //c-%diS matriks integer dari Diag(S)yang di inverse
+// KeluarMatrixDouble(diS,diS.size(),diS.size()); std::cout<<"\n \n"; 
+
+//c-perkalian matriks M dengan diS %MdiS
+ vector_vector_double MdiS;
+// MdiS=opmat_kali(M,M.size(),Mi.size(),diS,diS.size(),diS.size());
+// KeluarMatrixDouble(MdiS,M.size(),diS.size()); std::cout<<"\n \n";
+
+//c-Perkalian matriks M dengan dis versi Blas
+//c-Mengubah M dan Mdis kedalam vektor.
+ vector_double Mv(Mi.size()*M.size());
+ vector_double diSv(diS.size()*diS.size());
+ vector_double MdiSv(M.size()*diS.size());
+ Mv=opmat_mtv(M,M.size(),Mi.size());
+ diSv=opmat_mtv(diS,diS.size(),diS.size()); 
+// KeluarVectorDouble(Mv); std::cout<<"\n";KeluarVectorDouble(diSv);
+//c-perkalian matriks M dg diS dengan cblas
+ cblas_dgemm(CblasRowMajor,CblasNoTrans,CblasNoTrans,M.size(),diS.size(),diS.size(),1.0,&Mv[0],Mi.size(),&diSv[0],diS.size(),1.0,&MdiSv[0],diS.size());
+// KeluarVectorDouble(MdiSv); std::cout<<"\n";
+// KeluarMatrixDouble(opmat_vtm(MdiSv,M.size(),Mi.size()),M.size(),Mi.size());
+ 
+ vector_vector_double r; //c-%r matrix double perkalian antara M dan S 
+ vector_vector_double Rd; //c-%Rd deklarasi matriks R double
+ Rd=opmat_transpose_double(opmat_intodoub(R,R.size(),R.size()),R.size(),R.size());
+// KeluarMatrixDouble(Rd,R.size(),R.size());
+
+//c- mencari real space, menyiapkan Rd bentuk vektor
+ vector_double Rdv(Rd.size(),Rd.size());
+ Rdv=opmat_mtv(Rd,Rd.size(),Rd.size());
+ vector_double rv(M.size()*Mi.size()); //c-%rv deklarasi vektor rv, r dalam bentuk vektor
+ cblas_dgemm(CblasRowMajor,CblasNoTrans,CblasNoTrans,M.size(),Rd.size(),Rd.size(),1.0,&MdiSv[0],Mi.size(),&Rdv[0],Rd.size(),1.0,&rv[0],Rd.size());
+
+// KeluarMatrixDouble(opmat_vtm(rv,M.size(),Mi.size()),M.size(),Mi.size());
+ 
+ //c-operasi mencari matriks r (real space sample point) //o-r=M(Diag(S))^{-1}R'
+ r=opmat_vtm(rv,M.size(),Mi.size());
+// KeluarMatrixDouble(r,M.size(),Rd.size());
+
+ vector_vector_double Rinv; //c-Membuat matriks interger invers dari R
+ Rinv=opmat_inverse(R);
+
+ vector_vector_double Gi; //c-%Gi matriks latice sementara N*Rinv
+ vector_vector_double G; //c-%G matriks lattice vector
+ vector_double Nv(N.size()*Ni.size()); //c-%Nv matriks N dalam bentuk vector
+ Nv=opmat_mtv(N,N.size(),Ni.size()); //c-konversi dari matriks->vector N
+ vector_double Giv(N.size()*Ni.size()); //c-%Giv Gi dalam bentuk vector
+ vector_double Gv(N.size()*Ni.size()); //c-%Gv G dalam bentuk Vector
+ vector_double Rinvv(R.size()*R.size()); //c-%Rinvv Rinv dalam bentuk vektor.
+ Rinvv=opmat_mtv(Rinv,R.size(),R.size()); 
+ //c- menghitung Giv=N*Rinv
+ cblas_dgemm(CblasRowMajor,CblasNoTrans,CblasNoTrans,N.size(),R.size(),R.size(),1.0,&Nv[0],Ni.size(),&Rinvv[0],Rinv.size(),1.0,&Giv[0],Rinv.size());
+// KeluarMatrixDouble(opmat_vtm(Giv,N.size(),Ni.size()),N.size(),Ni.size());
+//c-menghitung matriks G
+ cblas_daxpy(N.size()*Ni.size(),2*PI,&Giv[0],1,&Gv[0],1);
+// out_dm(opmat_vtm(Gv,N.size(),Ni.size()),N.size(),Ni.size()); std::cout<<"\n";
+ G=opmat_vtm(Gv,N.size(),Ni.size());
+// KeluarMatrixDouble(G,N.size(),Rinv.size());
+ 
+ //c-cek kuadrat
+ vector_vector_double G2;
+// G2=opmat_kuadrat(G,N.size(),Rinv.size()); 
+// KeluarMatrixDouble(G2,N.size(),Rinv.size());
+ vector_double G2v(Gv.size());
+
+ //c-versi vector.
+// cblas_dgemv(CblasRowMajor,CblasNoTrans,1,1,1.0,&Gv[0],1,&Gv[0],1,1.0,&G2v[0],N.size());
+ G2v=opmat_vkuadrat(Gv);
+ G2=opmat_vtm(G2v,M.size(),Mi.size()); 
+//KeluarVectorDouble(G2v);
+// KeluarMatrixDouble(opmat_vtm(G2v,N.size(),Ni.size()),N.size(),Ni.size());
+
+ //c-sum matriks to vector
+ vector_double g2;
+ g2=opmat_sumd(G2,N.size(),Rinv.size());
+// out_dv(g2);
+// std::cout<<"\n"<<rv.size();
+
+ for (int i=0;i<rv.size();i++)
+   {
+     rout[i]=rv[i];
+   }
+ 
+ for (int i=0;i<g2.size();i++)
+   {
+     g2out[i]=g2[i]; 
+   }
+
+ vector_double gv;
+ gv=opmat_mtv(G,N.size(),3);
+ 
+ for (int i=0;i<rv.size();i++)
+   {
+    gout[i]=gv[i];
+   }
+
+ //c-Membersihkan memori yang telah selesai di gunakan.
+ ms.clear(); Mi.clear(); M.clear(); n1.clear(); Ni.clear();
+ N.clear(); R.clear(); diS.clear(); MdiS.clear();
+ Mv.clear(); diSv.clear(); MdiSv.clear(); r.clear();
+ Rd.clear(); Rdv.clear(); Rinv.clear(); Gi.clear();
+ G.clear(); Nv.clear(); Giv.clear(); Gv.clear(); Rinvv.clear();  
+ rv.clear(); g2.clear();
+}
+
+//c-%set_slice() paket untuk menampilkan hasil slice
+std::vector<std::vector<double> > set_slice(std::vector<double> dat, std::vector<int> S, int l, int k, int *ba, int *ko)
+{
+ std::vector<std::vector<std::vector<double> > > T;
+ T=opmat_vtt(dat,S[0],S[1],S[2]);
+ std::vector<double> V(S[0]*S[1]*S[2]);
+ std::vector<std::vector<double> > hasil;
+
+ int x,y,z; 
+ x=S[0]; y=S[1]; z=S[2];
+ 
+ if(k==1)
+   {
+    for(int i=0;i<y;i++)
+      {
+       for(int j=0;j<z;j++)
+         {
+          V[j]=T[j][i][l];
+         }
+      hasil.push_back(V);
+      }
+   ba[0]=y; ko[0]=z;
+   } else
+ if(k==2)
+   { 
+    for(int i=0;i<x;i++)
+     {
+       for(int j=0;j<z;j++)
+         {
+          V[j]=T[j][l][i]; 
+         }
+       hasil.push_back(V);
+     }
+   ba[0]=x; ko[0]=z;
+   } else
+ if(k==3)
+   {
+    for(int i=0;i<x;i++)
+      {
+       for(int j=0;j<y;j++)
+         {
+          V[j]=T[l][j][i];
+         }
+        hasil.push_back(V);
+      }
+    ba[0]=x; ko[0]=y;
+   }
+
+ return hasil;
+ hasil.clear(); V.clear(); T.clear(); dat.clear(); S.clear();
+}
+
+//c-%set_dplot: untuk membuat data yang bisa di plot.
+void set_dplot(std::vector<double> dat,std::vector<int> S)
+{ 
+  int batas;
+  std::vector<std::vector<double> > M,sementara,hasil;
+  int b,k;
+  for(int mat=1;mat<=3;mat++)
+    {
+     std::cout<<"iter ke"<<mat<<"\n"; 
+    
+     M=set_slice(dat,S,0,mat,&b,&k);
+     batas=b*k;   
+     std::vector<double> V(batas),V2(batas),V3(batas);
+      
+     for(int i=0;i<b;i++)
+       {
+        for(int j=0;j<k;j++)
+          {
+           V[i*k+j]=i*1.0;
+           V2[i*k+j]=j*1.0;
+           V3[i*k+j]=M[i][j];
+          }
+       } 
+ 
+     sementara.push_back(V);
+     sementara.push_back(V2);
+     sementara.push_back(V3);
+  
+     hasil=opmat_transpose_double(sementara,3,batas);
+    // out_dm(hasil,batas,3);
+     std::string q="view_";
+     fout_dm(hasil,q,mat,batas,3);  
+     
+     hasil.clear(); V.clear(); V2.clear(); V3.clear(); M.clear(); sementara.clear();
+   }
+  dat.clear();S.clear();
+}
+\end{verbatim}
+
+

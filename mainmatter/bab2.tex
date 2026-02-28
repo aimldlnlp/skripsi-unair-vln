@@ -1,0 +1,1422 @@
+\chapter{TINJAUAN PUSTAKA}
+
+\section{\textit{Vision–Language Navigation}}
+
+\vspace{0.5em}
+
+\subsection{\textit{Vision--Language Navigation}}
+
+\textit{Vision--Language Navigation} (VLN) adalah tugas memetakan instruksi bahasa alami $x$ menjadi rangkaian aksi agar agen \textit{embodied} mencapai tujuan yang diinginkan \parencite{anderson2018r2r,ku2020rxr}. Dalam VLN, agen berinteraksi secara berulang melalui siklus persepsi--aksi: pada langkah waktu $t$ agen menerima observasi egosentris $o_t$ lalu menghasilkan aksi $a_t$ yang mengubah \textit{pose} dan, akibatnya, distribusi observasi berikutnya. Dua pengaturan utama yang umum digunakan adalah: (i) navigasi diskret berbasis graf sudut pandang seperti R2R dan RxR, di mana agen berpindah antar-\textit{node} (\textit{viewpoint}) dan memilih orientasi diskret \parencite{anderson2018r2r,ku2020rxr}; serta (ii) pengaturan \textit{continuous control} seperti pada VLN-CE, dengan kontrol kecepatan sudut dan linear yang lebih realistis karena memasukkan dinamika, ketidakpastian sensor, dan biaya eksekusi \parencite{KrantzVLNCE}. Perbedaan struktur aksi ini penting bagi desain kebijakan karena menentukan bagaimana instruksi diproyeksikan menjadi rencana navigasi, bagaimana kesalahan terakumulasi, dan bagaimana strategi pemulihan dapat dilakukan pada tiap pengaturan.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.55\textwidth,trim=0mm 10mm 0mm 10mm,clip]{images/simplex_belief_pomdp.pdf}
+\caption{Representasi Simplex Dua-Dimensi untuk \textit{Belief State} pada POMDP dengan Tiga Status Laten.}
+\label{fig:belief-simplex}
+\end{figure}
+
+Gambar~\ref{fig:belief-simplex} memberi intuisi ruang \textit{belief state} pada POMDP ketika terdapat tiga status laten. Keyakinan agen direpresentasikan sebagai titik pada simplex 2D (segitiga): setiap simpul menyatakan keyakinan penuh pada satu status laten, sedangkan titik di interior segitiga menyatakan kombinasi probabilistik atas ketiga status tersebut. Trajektori titik-titik ${b_t}$ menggambarkan perubahan \textit{belief} dari waktu ke waktu akibat pengaruh dinamika transisi dan bukti observasi yang terus terakumulasi.
+
+Secara umum, VLN dapat dimodelkan sebagai \textit{Partially Observable Markov Decision Process} (POMDP),
+yang diringkas oleh tuple pada~\eqref{eq:pomdp_model}:
+\begin{equation}
+\mathcal{M}
+=
+\big\langle
+\mathcal{S}, \mathcal{A}, \mathcal{O},
+T, Z, R, \gamma, b_1
+\big\rangle .
+\label{eq:pomdp_model}
+\end{equation}
+\noindent
+dengan $\mathcal{S}$ himpunan status laten, $\mathcal{A}$ himpunan aksi, dan $\mathcal{O}$ himpunan observasi egosentris.
+Notasi $\Delta(\mathcal{X})$ menyatakan himpunan semua distribusi probabilitas di atas $\mathcal{X}$
+(\textit{probability simplex}).
+Pada setiap langkah waktu $t$, status laten $s_t \in \mathcal{S}$ menghasilkan observasi $o_t \in \mathcal{O}$,
+dan agen memilih aksi $a_t \in \mathcal{A}$.
+
+Pada navigasi diskret R2R/RxR, interpretasi yang lazim adalah $s_t$ mencakup \textit{viewpoint} saat ini beserta orientasi diskret,
+$a_t$ memilih perpindahan ke \textit{node} tetangga (serta perubahan orientasi), dan $o_t$ berupa citra/panorama RGB dari sudut pandang agen.
+Pada VLN-CE dengan kontrol kontinu, $s_t$ dapat dipahami sebagai \textit{pose} kontinu (misal posisi dan heading) beserta dinamika yang relevan,
+$a_t$ berupa pasangan kontrol kecepatan linear--sudut, dan $o_t$ mencakup sensor seperti RGB, kedalaman, dan/atau IMU \parencite{KrantzVLNCE}.
+Model ini memiliki fungsi transisi $T$, model observasi $Z$, fungsi ganjaran $R$, faktor diskonto $\gamma \in (0,1]$,
+serta \textit{belief} awal $b_1 \in \Delta(\mathcal{S})$.
+
+Fungsi transisi, model observasi, dan ganjaran pada~\eqref{eq:pomdp_model} dinyatakan sebagai:
+\begin{align}
+T &: \mathcal{S} \times \mathcal{A} \to \Delta(\mathcal{S}),
+&
+T(s' \mid s, a)
+&= \mathbb{P}\!\left(s_{t+1} = s' \mid s_t = s,\, a_t = a\right),
+\label{eq:transition}
+\\
+Z &: \mathcal{S} \times \mathcal{A} \to \Delta(\mathcal{O}),
+&
+Z(o \mid s', a)
+&= \mathbb{P}\!\left(o_{t+1} = o \mid s_{t+1} = s',\, a_t = a\right),
+\label{eq:observation}
+\\
+R &: \mathcal{S} \times \mathcal{A} \to \mathbb{R},
+&
+r_t
+&= R(s_t, a_t).
+\label{eq:reward}
+\end{align}
+\noindent
+Karena ketakteramatan parsial, agen tidak mengakses $s_t$ secara langsung.
+Sebagai gantinya, agen mempertahankan \textit{belief state} $b_t \in \Delta(\mathcal{S})$,
+yaitu distribusi posterior atas status laten pada waktu $t$ (dengan $a_{1:t-1}=(a_1,\dots,a_{t-1})$, misal $b_t(s) = \mathbb{P}(s_t=s \mid o_{1:t}, a_{1:t-1}, x)$).
+
+Satu episode interaksi agen-lingkungan dapat direpresentasikan sebagai trajektori pasangan observasi-aksi $\tau$ pada~\eqref{eq:trajectory}:
+\begin{equation}
+\tau
+=
+\big(
+(o_1, a_1),
+(o_2, a_2),
+\ldots,
+(o_H, a_H)
+\big),
+\label{eq:trajectory}
+\end{equation}
+dengan panjang trajektori atau \textit{horizon} episode $H$ didefinisikan pada~\eqref{eq:horizon}:
+\begin{equation}
+H = |\tau|.
+\label{eq:horizon}
+\end{equation}
+
+Agen memilih aksi menggunakan kebijakan yang bersyarat pada instruksi bahasa alami dan sejarah observasi. Pada langkah waktu $t$, pemilihan aksi mengikuti kebijakan stokastik pada~\eqref{eq:policy_def}:
+\begin{equation}
+a_t
+\sim
+\pi_{\theta}\left(
+\cdot \middle| o_{\le t}, x
+\right),
+\label{eq:policy_def}
+\end{equation}
+dengan $\pi_{\theta}$ kebijakan berparameter $\theta$, $o_{\le t}\equiv o_{1:t}=(o_1,\dots,o_t)$ sejarah observasi hingga langkah $t$, dan $x$ instruksi bahasa alami. Dalam praktik, kebijakan umumnya dilatih sebagai distribusi stokastik (untuk memodelkan ketidakpastian dan memfasilitasi optimisasi), namun saat eksekusi dapat digunakan keputusan \textit{greedy} melalui pemilihan $\arg\max$ atas distribusi yang sama.
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[t]{0.48\textwidth}
+\centering
+\includegraphics[width=\textwidth]{images/vln_viewpoint_graph_v4_complex.pdf}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.48\textwidth}
+\centering
+\includegraphics[width=\textwidth]{images/vln_viewpoint_graph_ring_v1.pdf}
+\end{subfigure}
+\caption{Representasi Graf Sudut Pandang pada Tugas Navigasi Diskret R2R/RxR.}
+\label{fig:vln-graph}
+\end{figure}
+
+Gambar~\ref{fig:vln-graph} memvisualisasikan pengaturan navigasi diskret ala R2R/RxR sebagai graf sudut pandang: simpul (\textit{node}) merepresentasikan lokasi kamera/\textit{viewpoint}, sedangkan sisi (\textit{edge}) menyatakan keterjangkauan gerak antar-\textit{viewpoint}. Episode navigasi dapat dipahami sebagai pemilihan dari simpul awal $S$ menuju simpul tujuan $G$; akibatnya, kesalahan sering termanifestasi sebagai pemilihan \textit{node} atau jalur yang keliru pada struktur topologis tersebut, dan pemulihan dapat terjadi melalui eksplorasi ulang jalur jika konektivitas graf memungkinkan.
+
+Objektif pembelajaran kebijakan adalah memaksimalkan ekspektasi ganjaran kumulatif terdiskonto sepanjang trajektori $\tau$ pada horizon $H$ dari~\eqref{eq:horizon}. Hal ini dirumuskan pada~\eqref{eq:policy_objective}:
+\begin{equation}
+\max_{\theta}
+\mathbb{E}_{\tau \sim \pi_{\theta}}\left[
+\sum_{t=1}^{H} \gamma^{t-1} r_t
+\right],
+\label{eq:policy_objective}
+\end{equation}
+dengan $r_t$ ganjaran pada langkah $t$ (misal $r_t = R(s_t, a_t)$ dari~\eqref{eq:reward}),
+$\mathbb{E}_{\tau \sim \pi_{\theta}}[\cdot]$ ekspektasi atas trajektori $\tau$ yang diinduksi oleh kebijakan $\pi_{\theta}$ pada~\eqref{eq:policy_def},
+dan $\gamma$ faktor diskonto seperti pada~\eqref{eq:pomdp_model}.
+
+Di bawah ketakteramatan, penyelarasan antara bahasa dan persepsi menjadi krusial. Agen perlu melakukan \textit{visual grounding} antara token instruksi dengan entitas visual, relasi spasial, dan \textit{affordance} yang relevan bagi navigasi. Model modern memusatkan \textit{visual grounding} melalui penyelarasan lintas-modal berbasis perhatian atau adaptor yang memproyeksikan fitur penglihatan ke ruang semantik bahasa \parencite{liu2025visualgrounding,liu2024embodiedai}. Kualitas \textit{grounding} ini memengaruhi kemampuan agen mempertahankan konsistensi lintas langkah serta melakukan koreksi ketika bukti visual ambigu.
+
+Peran simulator dan data sangat penting dalam VLN. Habitat menyediakan kerangka eksekusi efisien yang mensimulasikan sensor RGB, kedalaman, dan IMU dengan kontrol tingkat rendah yang dapat dikonfigurasi \parencite{savva2019habitat}. Adapun HM3D menghadirkan lingkungan \textit{indoor} yang beragam dengan fidelitas geometrik dan tekstur realistis \parencite{HM3D2021}. Ekosistem ini memungkinkan evaluasi dan pelatihan berskala besar secara praktis, sekaligus memudahkan studi sistematis tentang dampak sensor, dinamika, dan struktur ruang aksi.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.5\textwidth]{images/vln_trajectory_state_space.pdf}
+\caption{Ilustrasi \textit{Reference Trajectory} dan \textit{Agent Trajectory} dengan Akumulasi Kesalahan pada Bidang Posisi 2D.}
+\label{fig:vln-trajectory-2d}
+\end{figure}
+
+Gambar~\ref{fig:vln-trajectory-2d} mengilustrasikan fenomena \textit{compounding error} secara geometrik pada bidang posisi 2D dengan membandingkan \textit{reference trajectory} (lintasan rujukan) dan \textit{agent trajectory} (lintasan agen) yang mengandung galat kecil per langkah. Deviasi lokal yang tampak kecil pada awal lintasan dapat terakumulasi sehingga posisi akhir menyimpang signifikan dari lintasan rujukan dan berpotensi keluar dari radius toleransi keberhasilan; konsekuensinya, stabilitas eksekusi lokal dan mekanisme koreksi menjadi semakin penting pada episode yang lebih panjang.
+
+Walau demikian, dataset klasik umumnya berfokus pada navigasi \textit{short-horizon} dengan instruksi singkat dan sedikit struktur tindakan eksplisit. Instruksi sering cukup dengan petunjuk lokal pada beberapa langkah awal, tetapi kurang memaksa agen untuk menyusun, memelihara, dan merevisi rencana global \parencite{anderson2018r2r,ku2020rxr}. Akibatnya, analisis dan desain algoritma kerap memprioritaskan pemadanan frasa ke \textit{landmark} sesaat daripada \textit{planning} berlapis dan memori jangka panjang \parencite{Zhang2024}. Kesenjangan ini menuntut formulasi dan data yang mendorong dekomposisi tujuan, pelacakan progres, serta penyelarasan yang dapat diaudit antara rencana, observasi, dan bahasa.
+
+Dalam kerangka pemetaan instruksi ke aksi, pada setiap langkah waktu $t$ didefinisikan fungsi keputusan terparametrisasi $f_{\theta}$ sebagaimana dinyatakan pada~\eqref{code:Equation1}. Fungsi ini memetakan instruksi $x$ dan sejarah observasi hingga langkah tersebut, $o_{1:t} \coloneqq (o_1, \dots, o_t)$, ke sebuah aksi $a_t \in \mathcal{A}$:
+\begin{equation}
+a_t
+=
+f_{\theta}\bigl(x, o_{1:t}\bigr)
+=
+\arg\max_{a \in \mathcal{A}}
+\pi_{\theta}\bigl(a \mid o_{1:t}, x\bigr),
+\label{code:Equation1}
+\end{equation}
+\eqref{code:Equation1} mendefinisikan keputusan deterministik (eksekusi \textit{greedy}) dari distribusi kebijakan $\pi_{\theta}$, sementara selama pelatihan dan analisis probabilistik kebijakan tetap dipandang sebagai distribusi atas aksi.
+
+Selanjutnya, untuk tujuan analitis dan membangun intuisi tentang \textit{compounding error}, peluang keberhasilan episodik didefinisikan sebagai peluang bahwa seluruh rangkaian aksi yang dihasilkan dalam satu episode tepat sama dengan aksi rujukan (demonstrasi) $\{a_t^{*}\}_{t=1}^{H}$. Definisi \textit{success} ini tidak dimaksudkan sebagai definisi evaluasi standar VLN yang umumnya berbasis \textit{goal-reaching} (misal kedekatan ke tujuan), melainkan sebagai alat untuk memperlihatkan bagaimana kesalahan per langkah dapat berakumulasi pada horizon panjang. Dengan definisi tersebut, peluang \textit{success} dapat dituliskan pada~\eqref{code:Equation2}:
+\begin{equation}
+\mathbb{P}(\text{success})
+=
+\mathbb{P}\Biggl(\bigcap_{t=1}^{H} (a_t = a_t^{*})\Biggr)
+\approx
+\prod_{t=1}^{H} p_t,
+\label{code:Equation2}
+\end{equation}
+di mana aproksimasi $\prod_{t=1}^{H} p_t$ digunakan untuk menangkap perilaku peluruhan terhadap horizon $H$ di bawah asumsi penyederhanaan, misalnya dengan menganggap kejadian benar per langkah ``hampir independen'' ketika dikondisikan pada sejarah rujukan (\textit{teacher forcing}) dan instruksi, sehingga perubahan distribusi observasi akibat kesalahan sebelumnya diabaikan demi analisis yang lebih transparan.
+
+Probabilitas keberhasilan per langkah $p_t$ pada~\eqref{code:Equation2} didefinisikan pada~\eqref{code:Equation3} sebagai probabilitas bahwa aksi yang dipilih pada langkah ke-$t$ sama dengan aksi rujukan $a_t^{*}$, bersyarat pada instruksi dan sejarah observasi hingga langkah tersebut:
+\begin{equation}
+p_t
+=
+\mathbb{P}\left(a_t = a_t^{*}\mid o_{1:t}, x\right)
+=
+\pi_{\theta}\bigl(a_t^{*}\mid o_{1:t}, x\bigr),
+\label{code:Equation3}
+\end{equation}
+Sehingga, \eqref{code:Equation3} mengukur seberapa besar probabilitas kebijakan $\pi_{\theta}$ menempatkan massa pada aksi rujukan $a_t^{*}$ ketika dikondisikan pada instruksi $x$ dan sejarah observasi $o_{1:t}$. Dengan demikian, hubungan antara fungsi keputusan \eqref{code:Equation1}, probabilitas per langkah \eqref{code:Equation3}, dan aproksimasi peluang episodik \eqref{code:Equation2} menjadi eksplisit sebagai perangkat untuk memahami akumulasi kesalahan pada episode panjang.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{images/vln_compounding.pdf}
+\caption{Grafik Pengaruh Panjang Horizon Terhadap Peluang Keberhasilan Episodik Untuk Berbagai Tingkat Akurasi Langkah.}
+\label{fig:vln-compounding}
+\end{figure}
+
+Gambar~\ref{fig:vln-compounding} menunjukkan bahwa $\mathbb{P}(\text{success})$ menurun tajam ketika horizon $H$ bertambah untuk beberapa tingkat akurasi langkah $p_t$. Intuisi utamanya adalah bahwa keberhasilan episodik (dalam definisi analitis di atas) memerlukan keberhasilan beruntun di setiap langkah, sehingga akumulasi kesalahan menghasilkan peluruhan yang efektifnya bersifat eksponensial terhadap $H$. Implikasi praktisnya adalah kebutuhan strategi seperti \textit{waypointing}, supervisi sub-tujuan, dan \textit{re-planning} agar kesalahan awal tidak terpropagasi sepanjang episode.
+
+Pada skenario \textit{short-horizon}, agen dapat bergantung pada petunjuk lokal di sekitar posisi saat ini. Sebaliknya, pada \textit{long-horizon} agen perlu mendekomposisi tujuan global menjadi sub-tugas berantai, menggabungkan \textit{planning} hierarkis tingkat peta dengan kontrol lokal, mempertahankan memori peta metrik atau topologis, serta merepresentasikan progres terhadap rencana agar konsistensi lintas langkah dan ruangan terjaga \parencite{Song2025}. Pada pengaturan graf diskret, deviasi sering muncul sebagai pemilihan \textit{node} yang keliru dan dapat dipulihkan melalui manuver kembali jika struktur konektivitas mendukung. Pada kontrol kontinu, kesalahan heading atau translasi kecil terakumulasi menjadi \textit{pose drift} yang menurunkan kualitas pengamatan, sehingga estimasi keadaan dan penutupan \textit{loop} berbasis sensor menjadi vital \parencite{KrantzVLNCE}. Ketidakpastian sensor juga meningkatkan kebutuhan kebijakan yang memadukan persepsi yang tangguh dengan kontrol stabil, termasuk pengaturan kepercayaan terhadap instruksi ketika bukti visual tidak konsisten.
+
+\vspace{0.5em}
+
+\subsection{\textit{Long-Horizon Vision–Language Navigation}}
+\label{subsubsec:lhvln}
+
+\textit{Long-Horizon Vision–Language Navigation} (LH-VLN) memperluas VLN ke skenario multi-tahap yang menuntut konsistensi keputusan lintas sub-tugas, daya ingat konteks, dan kemampuan \textit{re-planning} lokal. Rangka LH-VLN modern yang relevan dengan penelitian ini memanfaatkan platform NavGen untuk menghasilkan episode multi-tahap yang dapat diaudit, disertai metrik evaluasi per-sub-tugas \parencite{Song2025}. Konsep LH-VLN serta kaitannya dengan tahapan data, tolok ukur, dan rancangan model diilustrasikan pada Gambar~\ref{fig:vln-intro}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/1-intro.pdf}    
+    \caption{Ilustrasi Konsep \textit{Long-Horizon Vision-Language Navigation} (LH-VLN) \parencite{Song2025}.}
+    \label{fig:vln-intro}
+\end{figure}
+
+Gambar~\ref{fig:vln-intro} mengilustrasikan alur besar LH-VLN dari sisi perumusan tugas hingga evaluasi: instruksi panjang dipecah menjadi serangkaian sub-tujuan yang saling bergantung, lalu episode multi-tahap dihasilkan secara terstruktur (misalnya melalui NavGen) agar setiap tahap dapat dilacak dan diaudit. Diagram tersebut juga menekankan bahwa keberhasilan LH-VLN tidak hanya ditentukan oleh “sampai tujuan akhir”, tetapi juga oleh ketepatan penyelesaian tiap sub-tugas, kemampuan mempertahankan konteks lintas ruangan/segmen, serta kapasitas mengoreksi rencana ketika terjadi penyimpangan atau ambiguitas observasi.
+
+Untuk menilai keberhasilan penyelesaian tugas kompleks yang terdiri dari beberapa tahap (\textit{multi-step}), digunakan lima metrik: \textit{Success Rate} (SR) pada~\eqref{eq:sr}, \textit{Success weighted by Path Length} (SPL) pada~\eqref{eq:spl}, \textit{Independent Success Rate} (ISR) pada~\eqref{eq:isr}, \textit{Conditional Success Rate} (CSR) pada~\eqref{eq:csr}, dan \textit{CSR weighted by Ground Truth} (CGT) pada~\eqref{eq:cgt} \parencite{Song2025}. Metrik SR dan SPL pada~\eqref{eq:sr}–\eqref{eq:spl} mengevaluasi keberhasilan tugas kompleks secara keseluruhan, sedangkan ISR, CSR, dan CGT pada~\eqref{eq:isr} hingga~\eqref{eq:cgt} memberikan gambaran lebih rinci tentang keberhasilan pada tingkat sub-tugas serta ketergantungan antar-tahap.
+\begin{equation}
+\label{eq:sr}
+\mathrm{SR}
+=
+\frac{1}{M}\sum_{j=0}^{M} S_j,
+\qquad 
+S_j
+=
+\prod_{i=1}^{N} s_{j,i}
+\end{equation}
+\eqref{eq:sr} mendefinisikan \textit{success rate} (SR) sebagai rata-rata indikator keberhasilan tugas kompleks, di mana $S_j$ bernilai $1$ hanya jika seluruh sub-tugas pada tugas ke-$j$ berhasil ($s_{j,i}=1$ untuk semua $i$).
+\begin{equation}
+\label{eq:spl}
+\mathrm{SPL}
+=
+\frac{1}{M}\sum_{j=0}^{M}
+S_j \,
+\frac{L_j^{*}}{\max\!\bigl(L_j^{*},\,\ell_j\bigr)}
+\end{equation}
+\eqref{eq:spl} mendefinisikan \textit{success weighted by path length} (SPL), yang menimbang keberhasilan $S_j$ dari~\eqref{eq:sr} dengan rasio efisiensi lintasan, yaitu perbandingan antara panjang lintasan rujukan terpendek $L_j^{*}$ dan panjang lintasan aktual yang ditempuh agen $\ell_j$.
+\begin{equation}
+\label{eq:isr}
+\mathrm{ISR}
+=
+\frac{1}{M\,N}
+\sum_{j=0}^{M}
+\sum_{i=0}^{N}
+s_{j,i}
+\end{equation}
+\eqref{eq:isr} mendefinisikan \textit{independent success rate} (ISR) sebagai rata-rata keberhasilan sub-tugas secara per-tahap, tanpa memperhitungkan ketergantungan eksplisit antar-tahap seperti yang dilakukan CSR pada~\eqref{eq:csr}.
+
+Untuk mengakomodasi ketergantungan berurutan antar-tahap pada CSR di~\eqref{eq:csr} dan CGT di~\eqref{eq:cgt}, digunakan konvensi $s_{j,0}=0$ untuk semua $j$, sehingga tahap pertama tidak memperoleh bobot tambahan dari tahap sebelumnya.
+\begin{equation}
+\label{eq:csr}
+\mathrm{CSR}
+=
+\frac{1}{M\,N^{2}}
+\sum_{j=0}^{M}
+\sum_{i=0}^{N}
+s_{j,i}\Bigl(1+(N-1)\,s_{i-1}\Bigr)
+\end{equation}
+\eqref{eq:csr} mendefinisikan \textit{conditional success rate} (CSR) yang
+mengukur keberhasilan sub-tugas dengan menimbang tahap yang sukses lebih tinggi
+apabila tahap sebelumnya juga berhasil.  
+Istilah $s_{j,i-1}$ pada~\eqref{eq:csr} memodelkan ketergantungan urutan,
+sehingga tahap ke-$i$ memperoleh bobot $1$ bila tahap sebelumnya gagal
+($s_{j,i-1}=0$) dan bobot $N$ bila tahap sebelumnya berhasil
+($s_{j,i-1}=1$), setelah dinormalisasi dengan $N^{2}$.
+\begin{equation}
+\label{eq:cgt}
+\mathrm{CGT}
+=
+\frac{1}{M\,N}
+\sum_{j=0}^{M}
+\sum_{i=0}^{N}
+\frac{P_i}{P}\;
+s_{j,i}\Bigl(1+(N-1)\,s_{j,(i-1)}\Bigr)
+\end{equation}
+\eqref{eq:cgt} mendefinisikan \textit{CSR weighted by ground truth} (CGT), yang memperluas CSR pada~\eqref{eq:csr} dengan menimbang setiap sub-tugas berdasarkan panjang lintasan rujukan \textit{ground truth} $P_i$. Faktor bobot $\frac{P_i}{P}$ pada~\eqref{eq:cgt} memastikan bahwa tahap dengan lintasan rujukan lebih panjang (dan umumnya lebih sulit) berkontribusi lebih besar terhadap nilai CGT total. Notasi yang digunakan dalam~\eqref{eq:sr}–\eqref{eq:cgt} diringkas pada Tabel~\ref{tab:notation}.
+\begin{table}[H]
+  \centering
+  \caption{Ringkasan Notasi yang Digunakan Pada~\eqref{eq:sr} Hingga \eqref{eq:cgt}.}
+  \label{tab:notation}
+
+  % set font size 10pt for the table
+  {\fontsize{10}{12}\selectfont
+  \begin{tabular}{lp{0.8\linewidth}}
+    \hline
+    Notasi & Deskripsi \\
+    \hline
+    $M$
+      & Jumlah tugas kompleks, digunakan sebagai faktor normalisasi 
+        pada~\eqref{eq:sr}–\eqref{eq:cgt}. \\
+    $N$
+      & Jumlah sub-tugas per tugas kompleks, digunakan sebagai faktor
+        normalisasi pada~\eqref{eq:isr}–\eqref{eq:cgt}. \\
+    $S_j \in \{0,1\}$
+      & Indikator sukses tugas kompleks ke-$j$, seperti didefinisikan
+        pada~\eqref{eq:sr}, bernilai $1$ hanya bila semua $s_{j,i}$ pada
+        tugas ke-$j$ bernilai $1$. \\
+    $s_{j,i} \in \{0,1\}$
+      & Indikator sukses sub-tugas ke-$i$ pada tugas ke-$j$, digunakan dalam
+        perhitungan SR (~\eqref{eq:sr}), ISR (~\eqref{eq:isr}), CSR
+        (~\eqref{eq:csr}), dan CGT (~\eqref{eq:cgt}). \\
+    $L_j^{*}$
+      & Panjang lintasan rujukan/terpendek untuk tugas kompleks ke-$j$,
+        misalnya agregat lintasan rujukan lintas sub-tugas, digunakan pada
+        SPL di~\eqref{eq:spl}. \\
+    $\ell_j$
+      & Panjang lintasan aktual yang ditempuh agen pada tugas ke-$j$, muncul
+        pada SPL di~\eqref{eq:spl}. \\
+    $s_{j,i-1}$
+      & Memodelkan ketergantungan berurutan pada CSR di~\eqref{eq:csr} dan
+        CGT di~\eqref{eq:cgt}, sehingga keberhasilan pada tahap lebih awal
+        mempengaruhi bobot tahap berikutnya; dengan konvensi $s_{j,0}=0$
+        seperti dijelaskan sebelum~\eqref{eq:csr}. \\
+    $P_i$
+      & Panjang lintasan \textit{ground-truth} untuk sub-tugas ke-$i$,
+        digunakan sebagai bobot kesulitan relatif pada CGT 
+        di~\eqref{eq:cgt}. \\
+    $P = \sum_{i=1}^{N} P_i$
+      & Panjang total lintasan rujukan sepanjang seluruh sub-tugas, sehingga
+        faktor $\frac{P_i}{P}$ pada~\eqref{eq:cgt} membentuk distribusi bobot
+        yang ter-normalisasi. \\
+    \hline
+  \end{tabular}
+  }
+\end{table}
+
+Berbeda dari VLN klasik, LH-VLN menuntut perancangan kebijakan hierarkis yang secara eksplisit memisahkan \textit{high-level planner} dan \textit{low-level controller}. Skema arsitektur lengkapnya ditunjukkan pada Gambar~\ref{fig:lhvln-pipeline}. Perencana tingkat atas menyintesis rangkaian \textit{waypoint} dari instruksi panjang, mengikat token kunci pada entitas peta topologis, serta menetapkan kendala urutan dan dependensi; pengendali tingkat bawah kemudian melakukan pelacakan lokal yang tangguh terhadap \textit{waypoint} sembari memperbarui keyakinan pose dan indikator progres. Untuk mempertahankan konsistensi lintas ruangan dan belokan, memori internal dapat berupa peta diferensiabel, memori graf topologis, atau \textit{plan sketch} simbolik yang dapat diaudit. Ketika deteksi \textit{off-route} atau ambiguitas visual terjadi, modul \textit{self-monitoring} memicu \textit{re-planning} adaptif sehingga jalur yang sudah ditempuh dan sisa instruksi dipertimbangkan ulang tanpa mengorbankan ketepatan terminologi rujukan dalam bahasa \parencite{Song2025}. Contoh \textit{rollout} kualitatif beserta pemicu \textit{re-planning} ditampilkan pada Gambar~\ref{fig:lhvln-qual}. 
+
+\begin{figure}[H]
+\centering
+\footnotesize
+\begin{adjustbox}{max width=\columnwidth,center,trim=0mm 0mm 0mm 0mm,clip}
+\begin{tikzpicture}[
+  font=\small,
+  >=Stealth,
+  thick,
+  node distance=6mm,
+  every node/.style={transform shape},
+  % --- Styles ---
+  block/.style={
+    draw,
+    align=center,
+    text width=0.23\columnwidth,
+    minimum height=12mm,
+    inner sep=3mm
+  },
+  input/.style={
+    block,
+    line width=0.7pt
+  },
+  core/.style={
+    block,
+    line width=1.0pt
+  },
+  aux/.style={
+    block,
+    line width=0.7pt
+  },
+  arrow/.style={->, thick},
+  farrow/.style={->, thick, dashed},
+  lab/.style={font=\scriptsize, fill=white, inner sep=1pt}
+]
+
+\pgfsetlayers{main,background}
+
+% --- Matrix layout (2 rows, left->right) ---
+\matrix (m) [matrix of nodes,
+             nodes in empty cells,
+             row sep=10mm,
+             column sep=10mm,
+             nodes={anchor=center}]
+{
+  % High-level row
+  \node[input] (instr) {\textbf{Instruction}\\``Go past the sofa,\\then enter the kitchen\\and stop by the sink.''}; &
+  \node[core]  (planner) {\textbf{High-Level Planner}\\Waypoints \& ordering}; &
+  \node[aux]   (memory) {\textbf{Memory}\\Map/Sketch}; &
+  \node[aux]   (monitor) {\textbf{Self-Monitoring}\\Off-route? Ambiguity?}; \\
+  % Low-level row
+  \node[aux]   (topo) {\textbf{Topo Map}\\Landmarks/Graph}; &
+  \node[core]  (controller) {\textbf{Low-Level Controller}\\Local waypoint tracking}; &
+  \node[aux]   (perception) {\textbf{Perception}\\RGB-D, poses}; &
+  \node[aux]   (actuation) {\textbf{Actuation}\\Velocity cmds}; \\
+};
+
+% --- Main left->right flow (solid) ---
+\draw[arrow] (instr) -- (planner);
+
+\draw[arrow] (planner) -- node[lab, pos=0.5, yshift=2pt] {waypoints} (controller);
+
+\draw[arrow] (controller) -- (perception);
+\draw[arrow] (perception) -- (actuation);
+
+% --- Additional main inputs (solid, still L->R dominant) ---
+\draw[arrow] (topo) -- (controller);
+\draw[arrow] (topo) to[out=20, in=200] (planner);
+
+\draw[arrow] (memory) -- node[lab, pos=0.5, yshift=2pt] {} (planner);
+
+\draw[arrow] (monitor) to[out=-150, in=-20] node[lab, pos=0.55, xshift=2pt] {alerts} (planner);
+
+% --- Feedback / monitoring loops (dashed, curved) ---
+\draw[farrow]
+  (perception) to[out=110, in=-70]
+  node[lab, pos=0.55, yshift=2pt] {monitoring signals}
+  (monitor);
+
+\draw[farrow]
+  (monitor) to[out=-200, in=20, looseness=1.1]
+  node[lab, pos=0.55, yshift=2pt] {re-plan if needed}
+  (planner);
+
+% --- Group boxes (no fill) ---
+\begin{pgfonlayer}{background}
+  \node[draw, line width=0.5pt, inner sep=5mm,
+        fit=(planner)(memory)(monitor),
+        label={[font=\scriptsize, xshift=-0mm]above:{High-level (global)}}] (hlbox) {};
+
+  \node[draw, line width=0.5pt, inner sep=5mm,
+        fit=(controller)(perception)(actuation),
+        label={[font=\scriptsize, xshift=-0mm]below:{Low-level (local)}}] (llbox) {};
+\end{pgfonlayer}
+
+\end{tikzpicture}
+\end{adjustbox}
+\normalsize
+\caption{Kebijakan Hierarkis LH-VLN}
+\label{fig:lhvln-pipeline}
+\end{figure}
+
+
+Gambar~\ref{fig:lhvln-pipeline} menekankan pemisahan peran antara komponen global dan lokal: pada lapisan \textit{high-level} (global), instruksi bahasa diubah menjadi \textit{waypoint} serta urutannya, dengan bantuan memori (peta/sketsa) agar konteks yang sudah dilalui tetap tersimpan dan dapat dipakai ulang saat membuat keputusan berikutnya. Pada lapisan \textit{low-level} (lokal), pengendali melacak \textit{waypoint} menggunakan masukan persepsi (misal RGB-D dan estimasi pose) untuk menghasilkan aksi kontrol (perintah kecepatan). Panah umpan-balik putus-putus memperlihatkan bagaimana sinyal monitoring dari persepsi masuk ke modul \textit{self-monitoring}; ketika terdeteksi \textit{off-route} atau ambiguitas, modul ini mengirim peringatan yang memicu perencana tingkat atas melakukan \textit{re-planning} sehingga rencana global dapat disesuaikan dengan keadaan aktual.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=1.0]
+  % Nodes (rooms)
+  \node[draw, circle, minimum size=7mm] (A) at (0,0) {\small Hall};
+  \node[draw, circle, minimum size=7mm] (B) at (3,0.2) {\small Sofa};
+  \node[draw, circle, minimum size=7mm] (C) at (6,0) {\small .};
+  \node[draw, circle, minimum size=7mm] (D) at (6,2.2) {\small Kitchen};
+  \node[draw, circle, minimum size=7mm] (E) at (8.5,2.2) {\small Sink};
+
+  % Edges (graph)
+  \draw[thick, black!40] (A) -- (B) -- (C) -- (D) -- (E);
+
+  % Ground-truth path
+  \draw[very thick, oiBlue, dashed] (A) -- (B) -- (C) -- (D) -- (E);
+
+  % Agent path (deviate then re-plan)
+  \draw[very thick, oiVermilion, dashed]
+      (A) -- (B) -- +(1.4,-0.8) coordinate (off)
+      (off) -- (C);
+  % Re-plan star and continuation
+  \node[star, star points=5, star point ratio=2.5, draw=oiYellow!70!black, fill=oiYellow, minimum size=8pt] at (C) {};
+  \draw[very thick, oiVermilion, dashed] (C) -- (D) -- (E);
+
+  % Waypoints
+  \foreach \n in {B,C,D,E}{
+    \node[draw=oiGreen, fill=oiGreen!15, rounded corners=1pt, inner sep=1pt] at ($( \n)+(0,0.6)$) {\tiny waypoint};
+  }
+
+  % Inset instruction box
+  \node[align=left, draw=black!30, rounded corners=2pt, fill=black!2, inner sep=3pt]
+    at (4.3,-1.2)
+    {\scriptsize \textbf{Instruction:} go past the sofa,\\[-1pt]
+     \scriptsize turn right into the kitchen, stop by the sink.};
+
+  % Legend
+  \begin{scope}[shift={(0,-2.2)}]
+    \draw[very thick, oiBlue, dashed] (0,0) -- (0.9,0) node[right, black]{\small Ground-truth};
+    \draw[very thick, oiVermilion, dashed] (4.0,0) -- (4.9,0) node[right, black]{\small Agent};
+    \node[star, star points=5, star point ratio=2.5, draw=oiYellow!70!black, fill=oiYellow, minimum size=8pt] at (8.0,0) {};
+    \node[right] at (8.5,0) {\small Re-plan trigger};
+  \end{scope}
+\end{tikzpicture}
+\caption{\textit{Rollout} Kualitatif LH-VLN}
+\label{fig:lhvln-qual}
+\end{figure}
+
+Gambar~\ref{fig:lhvln-qual} menggambarkan episode navigasi pada peta topologis sederhana (misal Hall $\rightarrow$ Sofa $\rightarrow$ Kitchen $\rightarrow$ Sink) beserta jalur \textit{ground-truth} (garis solid) dan jalur agen (garis putus-putus). \textit{Waypoint} ditandai pada simpul-simpul kunci untuk menunjukkan target lokal yang harus dicapai agen sejalan dengan instruksi bahasa. Ketika agen menyimpang dari rute yang semestinya (deviasi dari graf utama), simbol bintang menandai titik pemicu \textit{re-planning}; setelah pemicu ini, agen memperbaiki rute dan melanjutkan ke \textit{waypoint} berikutnya hingga mencapai tujuan akhir (misal Sink). Dengan visual seperti ini, sumber kegagalan dapat dianalisis lebih jelas: apakah kesalahan terjadi pada penentuan urutan \textit{waypoint}, pada eksekusi lokal (misal drift pose/looping), atau pada kebutuhan disambiguasi saat memasuki area yang mirip.
+
+Dari sisi data dan pelatihan, episode LH-VLN yang dihasilkan idealnya menyertakan pelabelan sub-tujuan, \textit{progress meter}, serta pelacakan \textit{landmark} untuk mendorong penyelarasan yang dapat diaudit antara rencana, observasi, dan bahasa \parencite{Song2025}. Skema pembelajaran yang efektif menggabungkan kurikulum dari \textit{short} ke \textit{long-horizon}, imitasi di tingkat sub-tujuan, dan penguatan dengan bentuk berbasis progres agar agen belajar menukar kepercayaan antara petunjuk linguistik dan bukti visual ketika domain bergeser atau sensor tidak pasti. Evaluasi multi-metrik (SR/SPL ditambah ISR/CSR/CGT) kemudian memberi sinyal berbeda: apakah kegagalan terutama berasal dari penyusunan rencana global (rendahnya CSR/CGT), pelaksanaan lokal (SPL rendah meski ISR moderat), atau regresi/putaran yang tidak produktif. Praktiknya, laporan kinerja LH-VLN sebaiknya menyajikan \textit{breakdown} per tahap, analisis \textit{failure modes} (misal kesalahan disambiguasi rujukan, \textit{pose drift}, \textit{looping}), dan studi ablatif pada komponen perencanaan, memori, serta \textit{re-planning} agar kemajuan dapat ditelusuri secara sistematis.
+
+\vspace{0.5em}
+
+\section{Lingkungan dan \textit{Dataset} VLN}
+
+\begin{figure}[H]
+  \centering
+
+  %==== Subfigure HM3D (atas) ====
+  \begin{subfigure}{\textwidth}
+    \centering
+    % baris-baris subfigure yang sudah kamu punya:
+    \begin{subfigure}[t]{0.3\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=4.2cm,keepaspectratio]{images/00004-VqCaAuuoeWk.jpg}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{0.3\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=4.2cm,keepaspectratio]{images/00007-UQuchpekHRJ.png}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{0.3\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=4.2cm,keepaspectratio]{images/00029-4wCTuaUNWEd.png}
+    \end{subfigure}
+
+    \vspace{0.4em}
+
+    \begin{subfigure}[t]{0.3\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=4.2cm,keepaspectratio]{images/00033-oPj9qMxrDEa.png}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{0.3\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=4.2cm,keepaspectratio]{images/00036-41FNXLAZZgC.png}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{0.3\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=4.2cm,keepaspectratio]{images/00043-Jfyvj3xn2aJ.png}
+    \end{subfigure}
+
+    \caption{}
+    \label{fig:hm3dexamples}
+  \end{subfigure}
+
+  \vspace{0.5em}
+
+  %==== Subfigure Gibson (bawah) ====
+  \begin{subfigure}{\textwidth}
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/gibson_examples.png}
+    \caption{}
+    \label{fig:gibsonexamples}
+  \end{subfigure}
+
+  % (opsional) caption besar untuk keseluruhan figure
+  \caption{Contoh Denah HM3D dan Gibson yang Digunakan dalam Simulasi Habitat. (a) Denah \textit{Top-Down} Adegan HM3D \parencite{HM3D2021}. (b) Contoh Peta \textit{Top-Down} Gibson \parencite{xia2018gibson}.}
+  \label{fig:hm3d_gibson}
+\end{figure}
+
+Eksekusi kebijakan navigasi berbasis bahasa membutuhkan lingkungan sintetis berperforma tinggi yang bertindak sebagai simulator. Lingkungan ini menyediakan model sensor dan protokol evaluasi yang terukur sehingga \textit{loop} persepsi-aksi dapat direplikasi hingga tingkat siklus yang halus \parencite{savva2019habitat}. Habitat menempatkan diri sebagai ekosistem modular dengan mesin grafika efisien, dukungan sensor RGB, kedalaman, dan \textit{ego-motion}, serta antarmuka eksperimen yang memudahkan pengaturan percobaan. Peningkatan arsitektural, seperti koordinasi tugas, pemuatan adegan asinkron, dan orkestrasi episode, menghasilkan kapasitas tinggi untuk pelatihan dan evaluasi. Komponen tersebut kompatibel lintas korpus adegan, termasuk HM3D dan Gibson \parencite{HM3D2021, xia2018gibson, szot2021habitat2}. Lihat Gambar~\ref{fig:hm3dexamples} untuk contoh denah HM3D dan Gambar~\ref{fig:gibsonexamples} untuk Gibson.
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}{0.3\textwidth}
+    \includegraphics[width=\linewidth]{images/rxr_teaser_frames/rxr_teaser_000.png}
+  \end{subfigure}
+  \begin{subfigure}{0.3\textwidth}
+    \includegraphics[width=\linewidth]{images/rxr_teaser_frames/rxr_teaser_015.png}
+  \end{subfigure}
+  \begin{subfigure}{0.3\textwidth}
+    \includegraphics[width=\linewidth]{images/rxr_teaser_frames/rxr_teaser_030.png}
+  \end{subfigure}
+
+  \begin{subfigure}{0.3\textwidth}
+    \includegraphics[width=\linewidth]{images/rxr_teaser_frames/rxr_teaser_045.png}
+  \end{subfigure}
+  \begin{subfigure}{0.3\textwidth}
+    \includegraphics[width=\linewidth]{images/rxr_teaser_frames/rxr_teaser_060.png}
+  \end{subfigure}
+  \begin{subfigure}{0.3\textwidth}
+    \includegraphics[width=\linewidth]{images/rxr_teaser_frames/rxr_teaser_075.png}
+  \end{subfigure}
+
+  \begin{subfigure}{0.3\textwidth}
+    \includegraphics[width=\linewidth]{images/rxr_teaser_frames/rxr_teaser_090.png}
+  \end{subfigure}
+  \begin{subfigure}{0.3\textwidth}
+    \includegraphics[width=\linewidth]{images/rxr_teaser_frames/rxr_teaser_105.png}
+  \end{subfigure}
+  \begin{subfigure}{0.3\textwidth}
+    \includegraphics[width=\linewidth]{images/rxr_teaser_frames/rxr_teaser_120.png}
+  \end{subfigure}
+
+  \caption{Rangkaian \textit{Frame} RxR yang Menampilkan Navigasi Agen dari Titik Awal Hingga Tujuan \parencite{ku2020rxr}.}
+  \label{fig:rxrframes} 
+\end{figure}
+
+Persepsi dan perencanaan dibantu oleh representasi peta. Agen bekerja pada graf sudut pandang berbasis konfigurasi \textit{viewpoints} yang juga berfungsi sebagai \textit{scene graph} dan \textit{navigation graph}. Setiap simpul menunjukkan lokasi kamera, dan setiap sisi menunjukkan keterjangkauan gerak. Ruang pose dalam konfigurasi kontinu membentuk manifold, yang memerlukan perencanaan lintasan dan estimasi keadaan pada ruang gerak yang lebih kaya. Rancangan kebijakan dipengaruhi oleh perbedaan ini. Pada graf diskret, perencanaan topologis dan tekstur permukaan frasa ke \textit{landmark} cenderung dominan; namun, pada ruang kontinu, kebijakan harus memadukan perencanaan kinodinamik, tekstur permukaan beresolusi tinggi, dan strategi pemulihan deviasi untuk menjaga stabilitas kontrol. Habitat membantu orkestrasi episode dan kompatibel dengan HM3D dan Gibson \parencite{savva2019habitat, HM3D2021, xia2018gibson, szot2021habitat2, wijmans2020vlnce}. Ilustrasi keragaman tata letak yang berdampak pada graf navigasi dapat dilihat pada Gambar~\ref{fig:hm3dexamples} dan Gambar~\ref{fig:gibsonexamples}.
+\begin{figure}[H]
+  \centering
+  % Baris 1
+  \begin{subfigure}{0.3\textwidth}
+    \includegraphics[width=\linewidth]{images/demo_frames/demo_000.png}
+  \end{subfigure}
+  \begin{subfigure}{0.3\textwidth}
+    \includegraphics[width=\linewidth]{images/demo_frames/demo_006.png}
+  \end{subfigure}
+  \begin{subfigure}{0.3\textwidth}
+    \includegraphics[width=\linewidth]{images/demo_frames/demo_012.png}
+  \end{subfigure}
+
+  % Baris 2
+  \begin{subfigure}{0.3\textwidth}
+    \includegraphics[width=\linewidth]{images/demo_frames/demo_018.png}
+  \end{subfigure}
+  \begin{subfigure}{0.3\textwidth}
+    \includegraphics[width=\linewidth]{images/demo_frames/demo_024.png}
+  \end{subfigure}
+  \begin{subfigure}{0.3\textwidth}
+    \includegraphics[width=\linewidth]{images/demo_frames/demo_030.png}
+  \end{subfigure}
+
+  % Baris 3
+  \begin{subfigure}{0.3\textwidth}
+    \includegraphics[width=\linewidth]{images/demo_frames/demo_036.png}
+  \end{subfigure}
+  \begin{subfigure}{0.3\textwidth}
+    \includegraphics[width=\linewidth]{images/demo_frames/demo_042.png}
+  \end{subfigure}
+  \begin{subfigure}{0.3\textwidth}
+    \includegraphics[width=\linewidth]{images/demo_frames/demo_045.png}
+  \end{subfigure}
+
+  \caption{Rangkaian \textit{Frame} R2R yang Menggambarkan Lintasan Rujukan pada Matterport3D \parencite{anderson2018r2r, chang2017matterport3d}.}
+  \label{fig:r2rframes}
+\end{figure}
+
+R2R dirancang sebagai tolok ukur pada adegan Matterport3D dengan graf sudut pandang diskret dan menyediakan pasangan instruksi berbahasa Inggris serta lintasan target pada simpul kamera yang telah dikuantisasi \parencite{anderson2018r2r, chang2017matterport3d}. Instruksinya menekankan deskripsi rute tingkat lokal. Contoh episode RxR ditunjukkan pada Gambar~\ref{fig:rxrframes}, sedangkan contoh episode R2R ditunjukkan pada Gambar~\ref{fig:r2rframes}. Metrik umum meliputi \textit{Success Rate}, \textit{SPL}, dan \textit{nDTW} yang mengevaluasi ketepatan topologis serta efisiensi lintasan relatif terhadap rujukan. RxR memperluas ke pengaturan multibahasa, menambah variasi panjang dan gaya instruksi, serta memperkaya anotasi jejak rute dan wacana sehingga mendorong pemodelan pemahaman linguistik yang lebih dalam \parencite{ku2020rxr}. Keduanya efektif untuk studi \textit{short-horizon} karena fokus pada beberapa petunjuk visual berurutan di sekitar posisi saat ini. Namun, keterbatasan muncul pada skenario \textit{long-horizon} yang memerlukan perencanaan bertingkat, memori peta, dan pemulihan kesalahan berulang \parencite{Zhang2024}. Instruksi yang relatif ringkas, struktur tindakan yang tidak diekspos secara eksplisit, serta ketiadaan pemetaan satu-ke-satu antara tahapan rencana multi-langkah dan teks menyulitkan diagnosis kegagalan berantai.
+
+Untuk mengukur kesesuaian lintasan prediksi terhadap lintasan rujukan diskret, digunakan kriteria kesamaan topologis antara kedua lintasan tersebut. Secara khusus, kerugian (\textit{loss}) didefinisikan sebagai bentuk komplementer dari \textit{normalized Dynamic Time Warping} (nDTW). Misalkan $\hat{\tau}$ menyatakan lintasan prediksi dan $\tau^{\star}$ lintasan rujukan, maka kerugian topologis didefinisikan pada~\eqref{eq:ndtw1} sebagai
+\begin{equation}
+\mathcal{L}_{\text{path}}(\hat{\tau}, \tau^{\star}) 
+= 1 - \mathrm{nDTW}\!\left(\hat{\tau}, \tau^{\star}\right).
+\label{eq:ndtw1}
+\end{equation}
+Lintasan prediksi $\hat{\tau}$ diasumsikan dihasilkan oleh suatu kebijakan parametrik $\pi_{\theta}$, sedangkan lintasan rujukan $\tau^{\star}$ merupakan lintasan \textit{ground truth}. Hubungan ini dinyatakan eksplisit pada~\eqref{eq:ndtw2}:
+\begin{equation}
+\hat{\tau} \sim \pi_{\theta}, 
+\qquad 
+\tau^{\star}\ \text{: lintasan \textit{ground truth}}.
+\label{eq:ndtw2}
+\end{equation}
+dengan $\mathcal{L}_{\text{path}}(\hat{\tau}, \tau^{\star})$ merepresentasikan kerugian yang meminimalkan ketidakselarasan topologis antara lintasan prediksi $\hat{\tau}$ dan lintasan rujukan $\tau^{\star}$ sebagaimana didefinisikan pada~\eqref{eq:ndtw1}. Selain itu, $\mathrm{nDTW}(\hat{\tau}, \tau^{\star})$ merupakan ukuran kesamaan berbasis \textit{normalized dynamic time warping} pada graf sudut pandang antara kedua lintasan tersebut, juga didefinisikan pada~\eqref{eq:ndtw1}. Kebijakan parametrik $\pi_{\theta}$ dengan parameter $\theta$ menginduksi distribusi trajektori sebagaimana dinyatakan pada~\eqref{eq:ndtw2}. Lintasan $\hat{\tau}$ adalah lintasan yang dihasilkan selama eksekusi kebijakan $\pi_{\theta}$, sedangkan $\tau^{\star}$ adalah lintasan rujukan (\textit{ground truth}) yang digunakan sebagai acuan evaluasi, keduanya sebagaimana dijelaskan pada~\eqref{eq:ndtw2}.
+
+Secara praktis, objektif pelatihan tidak hanya bergantung pada satu realisasi trajektori, melainkan dituliskan sebagai ekspektasi atas distribusi trajektori yang diinduksi oleh kebijakan $\pi_{\theta}$. Dengan memanfaatkan definisi kerugian pada~\eqref{eq:ndtw1} dan hubungan trajektori–kebijakan pada~\eqref{eq:ndtw2}, objektif pelatihan dapat dirumuskan seperti pada~\eqref{eq:ndtw_obj} berikut:
+\begin{equation}
+\min_{\theta}\ \mathbb{E}_{\hat{\tau}\sim \pi_{\theta}}
+\Big[\,1 - \mathrm{nDTW}\!\left(\hat{\tau}, \tau^{\star}\right)\,\Big]
+\quad \Longleftrightarrow \quad
+\max_{\theta}\ \mathbb{E}_{\hat{\tau}\sim \pi_{\theta}}
+\Big[\,\mathrm{nDTW}\!\left(\hat{\tau}, \tau^{\star}\right)\,\Big].
+\label{eq:ndtw_obj}
+\end{equation}
+
+\noindent Pada~\eqref{eq:ndtw_obj}, operator $\mathbb{E}_{\hat{\tau}\sim \pi_{\theta}}[\cdot]$ menyatakan harapan terhadap distribusi trajektori $\hat{\tau}$ yang diinduksi oleh kebijakan $\pi_{\theta}$. Jika nilai kesamaan $\mathrm{nDTW}(\hat{\tau}, \tau^{\star})$ dibatasi pada rentang $[0,1]$, maka dari definisi pada~\eqref{eq:ndtw1} diperoleh bahwa $\mathcal{L}_{\text{path}}(\hat{\tau}, \tau^{\star}) \in [0,1]$ dan nilai minimum $\mathcal{L}_{\text{path}}(\hat{\tau}, \tau^{\star}) = 0$ tercapai ketika lintasan prediksi $\hat{\tau}$ identik secara topologis dengan lintasan rujukan $\tau^{\star}$.
+
+Kerangka LH-VLN yang diilustrasikan pada Gambar~\ref{fig:vln-intro} memfaktorkan tujuan global menjadi \textit{waypoint} dan sub-tugas yang dapat diperiksa kembali, lalu menautkan rencana ke teks melalui pasangan representasi rencana-instruksi yang eksplisit \parencite{Song2025}. Alur generatif dimulai dari perincian rencana granular pada peta topologis maupun metrik, tahap berikutnya menyusun instruksi tingkat tinggi yang mempertahankan ketercakupan \textit{landmark} dan relasi spasial, kemudian dilakukan validasi kepatuhan semantik terhadap adegan aktual \parencite{Song2025,radford2021clip}. LLM \textit{in-the-loop} untuk mengatur gaya, format, dan konsistensi naratif lintas sub-tugas, termasuk pengendalian intensitas deskripsi lokal relatif terhadap arahan global \parencite{OpenAI2023,Lu2023PlanSolve,Yao2023ReAct,Zhang2024}. Dengan demikian, analisis kegagalan berantai dapat mengidentifikasi sub-tugas yang terhenti serta bukti visual yang ambigu \parencite{Song2025,Liu2023GEval}.
+
+% Pengendalian gaya linguistik lintas bahasa diakomodasi melalui pembatasan per token, misalnya \textit{per-token language mask} untuk mengatur rasio frasa bahasa Indonesia terhadap bahasa Inggris, sehingga pola \textit{code-switch} dapat direkayasa sesuai skenario pengguna. Dari sisi komputasi, pemetaan dari tujuan menuju rencana, dari rencana menuju instruksi, dan dari instruksi menuju aksi dirumuskan terlebih dahulu dalam narasi ini, lalu dinyatakan secara formal sebagai~\eqref{eq:lhvln1}--\eqref{eq:lhvln3} berikut.
+% \begin{equation}
+% \phi:\ \text{Goal} \mapsto W = (w_1,\ldots,w_K),
+% \label{eq:lhvln1}
+% \end{equation}
+% \begin{equation}
+% g_{\psi}: (W, \text{scene}) \mapsto x,
+% \label{eq:lhvln2}
+% \end{equation}
+% \begin{equation}
+% f_{\theta}: (x, o_{1:t}) \mapsto a_t,
+% \label{eq:lhvln3}
+% \end{equation}
+% \noindent di mana:
+% \begin{itemize}
+% \item $\phi$ adalah fungsi perencanaan tingkat tinggi yang memetakan tujuan global menjadi urutan \textit{waypoint} yang layak dieksekusi,
+% \item $W = (w_1,\ldots,w_K)$ adalah urutan \textit{waypoint} dengan panjang $K$ sebagai target perantara sepanjang lintasan,
+% \item $g_{\psi}$ adalah modul generatif yang menyintesis instruksi berbasis konteks adegan,
+% \item $x$ adalah representasi instruksi yang menjaga ketercakupan \textit{landmark} dan relasi spasial untuk seluruh $W$,
+% \item $f_{\theta}$ adalah kebijakan eksekusi yang memetakan instruksi dan observasi sekuensial $o_{1:t}$ menjadi aksi tingkat rendah $a_t$,
+% \item $a_t$ adalah perintah translasi atau rotasi pada waktu $t$ yang tangguh terhadap ketidakpastian sensor.
+% \end{itemize}
+
+\vspace{0.5em}
+
+\section{Model Visi Fondasi: \textit{Recognize Anything Model} (RAM)}
+\label{subsec:ram_tag2text}
+
+\vspace{0.5em}
+
+\subsection{Pengantar Model Visi Fondasi}
+
+Perkembangan \textit{foundation models} pada ranah bahasa telah diikuti oleh kemunculan \textit{foundation vision models} (\textit{FVM}), yakni model visi berskala besar yang dilatih pada korpora citra atau pasangan citra--teks dalam skala jutaan hingga miliaran contoh dan dirancang untuk dapat diadaptasi secara \textit{zero-shot} atau \textit{few-shot} ke berbagai tugas hilir. Contoh menonjol di ranah visi mencakup Segment Anything Model (SAM) untuk segmentasi \textit{promptable} \parencite{kirillov2023segment} dan ViT-22B sebagai \textit{Vision Transformer} berskala 22 miliar parameter \parencite{pmlr-v202-dehghani23a}, yang menunjukkan bahwa skala parameter dan data juga membawa manfaat signifikan bagi representasi visual generik.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\linewidth]{images/visualisasi_2_zero_few_shot_transfer_paperish_v3.pdf}
+    \caption{Kurva Kinerja Hilir Terhadap Jumlah Contoh Berlabel Pada Skenario \textit{Zero-Shot} Dan \textit{Few-Shot}}
+    \label{fig:zero_few_shot_transfer}
+\end{figure}
+
+Gambar~\ref{fig:zero_few_shot_transfer} memperlihatkan tren peningkatan kinerja tugas hilir seiring bertambahnya jumlah demonstrasi berlabel, dengan ketiga metode menunjukkan pola \textit{diminishing returns} pada jumlah \textit{shots} yang lebih besar; model berbasis \textit{foundation vision model} untuk \textit{image tagging} (Tag2Text dan RAM++) memberikan kinerja \textit{zero-shot} yang lebih tinggi dan tetap mempertahankan keunggulan pada \textit{few-shot} dibandingkan baseline, sementara pita ketidakpastian (95\% CI) menggambarkan variasi antar percobaan dan cenderung menyempit ketika jumlah \textit{shots} meningkat.
+
+Dalam konteks \textit{embodied AI} dan Vision--Language Navigation (VLN) long-horizon, \textit{foundation vision model} memainkan peran sebagai \textit{perceptual backbone} yang menyediakan representasi semantik tinggi atas observasi visual agen. Daripada merancang \textit{feature extractor} yang sempit untuk satu tugas navigasi, pendekatan modern cenderung memanfaatkan FVM yang telah dilatih sebelumnya dan kemudian mengekstraksi informasi objek, tata ruang, serta atribut lingkungan dari keluaran model tersebut. Hal ini sangat relevan untuk pipeline berbasis \textit{large language model} (LLM), karena LLM bekerja lebih efektif ketika menerima representasi visual yang sudah diproyeksikan ke ruang simbolik atau linguistik (misalnya, daftar tag semantik atau deskripsi tekstual) alih-alih langsung dari piksel mentah.
+
+Subbab ini memfokuskan pada dua model visi fondasi yang berorientasi pada \textit{image tagging} dan pemetaan citra ke struktur semantik, yakni \textit{Recognize Anything Model} (RAM / RAM++) \parencite{zhang2023recognize,huang2023openset} dan Tag2Text \parencite{huang2023tag2text}. Keduanya menyediakan antarmuka yang sangat cocok untuk menghubungkan observasi visual dalam lingkungan 3D dengan pemodelan bahasa berbasis LLM di VLN \textit{long-horizon}.
+
+\vspace{0.5em}
+
+\subsection{\textit{Recognize Anything Model} (RAM / RAM++)}
+
+\textit{Recognize Anything Model} (RAM) diperkenalkan sebagai \textit{image tagging model} berskala besar yang dirancang untuk \textit{open-set image tagging} \parencite{zhang2023recognize}. Tidak seperti klasifikasi multi-label tradisional yang terbatas pada himpunan label tertutup, RAM memanfaatkan skema pelabelan universal dan mekanisme kueri tekstual sehingga mampu mengenali ribuan kategori umum dan melakukan generalisasi ke kategori baru. Secara konseptual, untuk sebuah citra $x$, RAM menghasilkan himpunan tag semantik sebagaimana ditunjukkan pada~\eqref{eq:ram_tagset}:
+\begin{equation}
+\hat{p}_{\ell}(x) = \sigma\!\big(z_{\ell}(x)\big),
+\qquad
+\mathcal{L}(x) = \left\{\ell \in \mathcal{V} \;\middle|\; \hat{p}_{\ell}(x) \ge \tau \right\},
+\label{eq:ram_tagset}
+\end{equation}
+di mana $z_{\ell}(x)$ adalah skor/logit untuk label $\ell$ yang diprediksi dari citra $x$, $\sigma(\cdot)$ adalah fungsi sigmoid, $\hat{p}_{\ell}(x)$ adalah skor kepercayaan (confidence) per-label, $\mathcal{V}$ adalah himpunan label/kueri teks yang digunakan saat inferensi, dan $\tau$ adalah ambang untuk menentukan tag mana yang dipertahankan dalam $\mathcal{L}(x)$.
+
+\begin{figure}[H]
+  \centering
+  % Sesuaikan path & ekstensi file dengan nama file kamu
+  \includegraphics[width=0.8\linewidth]{images/ram_semantic_tag_space_theoretical_en_shortylabel_spacedL.png}
+  \caption{Ruang Semantik Tag RAM Sebagai Aproksimasi \textit{Embedding} Label $\mathcal{V}$.}
+  \label{fig:ram_semantic_tag_space}
+\end{figure}
+
+Gambar~\ref{fig:ram_semantic_tag_space} memvisualisasikan intuisi bahwa keluaran RAM berupa himpunan tag $\mathcal{L}(x)$ dapat dipandang sebagai subset dari ruang label besar $\mathcal{V}$ yang “dipilih” berdasarkan ambang $\tau$, yakni \eqref{eq:ram_tagset}. Sumbu-$x$ menunjukkan tingkat \textit{concreteness} (semakin ke kanan semakin konkret/berwujud), sedangkan sumbu-$y$ merepresentasikan spektrum tipe konsep dari \textit{entity}-level (misal objek) menuju konteks tingkat tinggi (misal \textit{scene} atau atribut kontekstual). Titik-titik dengan bentuk berbeda melambangkan kategori label yang berbeda (objek, \textit{scene}, atribut), dan lingkaran putus-putus menggambarkan “wilayah” tag yang dipertahankan RAM untuk sebuah citra tertentu. Contoh tag seperti \textit{door}, \textit{sofa}, \textit{stairs} (lebih konkret) serta \textit{kitchen}, \textit{corridor}, \textit{bright}, \textit{cluttered} (lebih kontekstual) menunjukkan bahwa RAM tidak hanya mengekstrak objek, tetapi juga merangkum konteks dan atribut yang relevan dalam satu representasi tag semantik yang eksplisit.
+
+RAM dilatih menggunakan kombinasi data \textit{image--text} skala besar dan tag yang diperoleh secara otomatis melalui \textit{text semantic parsing}. Arsitekturnya mengintegrasikan modul \textit{image encoder}, \textit{recognition decoder} untuk multi-label tagging, serta \textit{text generation decoder} untuk captioning \parencite{zhang2023recognize}. Dibandingkan model \textit{vision--language} sebelumnya yang menyelaraskan citra dan teks secara global, RAM melakukan penyelarasan yang lebih halus antara fitur region dan tag, sehingga mampu memprediksi sejumlah besar tag yang relevan dengan ketepatan tinggi. Hasilnya, RAM dapat secara \textit{zero-shot} mengenali lebih dari 6{,}000 kategori umum dan melampaui model multi-label terawasi pada berbagai \textit{benchmark} tagging \parencite{zhang2023recognize}.
+
+RAM++ kemudian diusulkan sebagai pengembangan RAM dengan fokus pada \textit{open-set image tagging} yang lebih kuat \parencite{huang2023openset}. RAM++ mengintegrasikan \textit{multi-grained text supervision} dengan triplet citra--tag--teks, sehingga tidak hanya memanfaatkan supervisi global berupa deskripsi kalimat, tetapi juga supervisi per-tag secara eksplisit. Selain itu, RAM++ memanfaatkan LLM untuk memperkaya deskripsi tag menjadi frasa yang lebih kaya semantik, memperluas cakupan konsep visual yang dapat dicakup dalam pengaturan \textit{open-set}. Secara empiris, RAM++ menunjukkan peningkatan signifikan atas RAM dan model lain pada berbagai skenario, termasuk tag kategori umum, kategori langka, serta frasa interaksi manusia--objek \parencite{huang2023openset}.
+
+Dalam konteks VLN, keunggulan utama RAM/RAM++ terletak pada kemampuannya menghasilkan himpunan tag semantik yang eksplisit untuk setiap observasi visual, yang dapat diformalkan melalui~\eqref{eq:ram_tagset}. Tag-tag ini mencakup informasi objek (misal, \textit{sofa}, \textit{table}, \textit{stairs}), tipe ruangan (misal, \textit{kitchen}, \textit{corridor}), serta atribut konteks (misal, \textit{bright}, \textit{cluttered}). Representasi semacam ini menyediakan \textit{symbolic interface} antara piksel dan bahasa, sehingga memudahkan proses \textit{grounding} antara instruksi linguistik dan entitas visual. Selain itu, representasi ini juga berfungsi untuk menyaring informasi yang relevan bagi navigasi, misalnya hanya menyimpan tag yang berkaitan dengan landmark atau tujuan lokal, serta memasok LLM dengan daftar entitas yang dapat dirujuk secara eksplisit dalam instruksi.
+
+Gambar~\ref{fig:ram_triplet_space} mengilustrasikan mekanisme RAM++ yang mempelajari representasi gabungan citra--tag--teks melalui penyelarasan (\textit{alignment}) berbasis triplet. Fitur citra $x_i$ berada pada \textit{image feature space}, sementara embedding tag $t_j$ berada pada \textit{tag space}; keduanya didorong agar selaras melalui vektor \textit{image--tag alignment} sehingga prediksi tag menjadi lebih \textit{grounded} pada bukti visual. Selain itu, teks (misal \textit{short caption} atau deskripsi yang diperkaya) menyediakan supervisi linguistik yang dipetakan ke representasi $y_k$, sehingga RAM++ tidak hanya menyamakan citra dengan tag secara lokal, tetapi juga mengaitkannya dengan makna bahasa pada level kalimat/frasa. Dengan supervisi multi-butir (per-tag dan global), model belajar sebuah ruang representasi bersama yang konsisten: citra, tag, dan teks saling mengunci secara semantik, yang pada akhirnya memperkuat \textit{open-set image tagging} dan memudahkan integrasi tag eksplisit ke modul penalaran berbasis LLM.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[
+      width=0.5\linewidth,
+      trim=0mm 6mm 0mm 6mm,
+      clip
+      ]{images/ram_triplet_cube.png}
+    \caption{Ilustrasi Ruang Gabungan Citra--Tag--Teks pada RAM++ dan Mekanisme Penyelarasan Image--Tag--Text Triplet.}
+    \label{fig:ram_triplet_space}
+\end{figure}
+
+Dengan demikian, RAM dan RAM++ dapat dipandang sebagai modul persepsi generik yang menyiapkan fakta-fakta visual eksplisit sebelum LLM menyusun instruksi navigasi natural. Mekanisme penyelarasan antara citra, tag, dan representasi tekstual dalam RAM++ dapat dilihat pada Gambar~\ref{fig:ram_triplet_space}, di mana model mempelajari hubungan eksplisit antara $x_i$, $t_j$, dan $y_k$ melalui skema \textit{image--tag--text triplet}.
+
+\vspace{0.5em}
+
+\section{\textit{Code-Switching} Indonesia-Inggris}
+
+\vspace{0.5em}
+
+\subsection{Tipologi dan Teori Linguistik}
+
+\textit{Code-switching} adalah pemakaian dua bahasa atau lebih dalam satu wacana yang koheren, yang dapat mencakup satu percakapan, satu instruksi navigasi, bahkan satu kalimat tunggal. Literatur klasik biasanya membedakan tiga tipe utama \textit{code-switching}, yaitu \textit{inter-sentential}, \textit{intra-sentential}, dan \textit{tag-switching}, masing-masing dengan fungsi komunikatif yang berbeda dalam interaksi sosial maupun instruksi tugas \parencite{winata2023decades}.
+
+\textit{Inter-sentential} adalah perpindahan bahasa yang terjadi tepat di batas kalimat, misalnya “Belok kanan di ujung koridor. \textit{Then continue straight to the lobby}”. Peralihan seperti ini sering dipakai untuk memberi tanda bahwa penutur sedang menggeser konteks kecil dalam pembicaraan: dari penjelasan yang bersifat umum (dalam bahasa Indonesia) ke bagian yang lebih teknis atau lebih spesifik (dalam bahasa Inggris), atau untuk menyesuaikan pilihan bahasa dengan audiens yang lebih nyaman menggunakan bahasa tertentu \parencite{winata2023decades}.
+
+\textit{Intra-sentential} terjadi ketika perpindahan bahasa muncul di dalam satu kalimat atau klausa, contohnya “Jalan lurus sampai \textit{glass door}, lalu belok kiri ke \textit{main desk}”. Pada pola ini, bahasa Indonesia biasanya menjadi kerangka tata bahasa utama, sedangkan kata atau frasa tertentu, terutama nama objek fisik dan \textit{landmark}, tetap dalam bahasa Inggris agar rujukannya lebih tepat dan tidak membingungkan. Secara praktis, hal ini juga memudahkan penutur karena tidak perlu mencari padanan lokal untuk istilah teknis yang sudah umum dipakai dalam bahasa Inggris.
+
+Sementara itu, \textit{tag-switching} adalah penyisipan \textit{tag}, partikel diskursus, atau penanda sikap yang relatif lepas dari struktur kalimat, misalnya “Naik tangga ke lantai dua, \textit{okay}?”. Unsur seperti ini biasanya dipakai untuk mengecek pemahaman, melunakkan nada perintah, atau membangun kedekatan interpersonal, tanpa mengubah inti informasi yang disampaikan \parencite{winata2023decades}. Tabel~\ref{tab:cs-ringkas} menyajikan contoh tambahan untuk \textit{inter-sentential}, \textit{intra-sentential}, dan \textit{tag-switching}, sedangkan Gambar~\ref{fig:cs-mindmap} merangkum ketiganya dalam bentuk peta konsep.
+
+\begin{table}[htbp]
+\centering
+\caption{Contoh \textit{Code-Switch}: \textit{Inter-Sentential}, \textit{Intra-Sentential}, dan \textit{Tag-Switching}.}
+\label{tab:cs-ringkas}
+\begingroup
+\fontsize{10pt}{12pt}\selectfont
+\setlength{\tabcolsep}{8pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{@{}l p{0.8\textwidth}@{}}
+\toprule
+\textbf{Target} & \textbf{Contoh} \\
+\midrule
+
+\multirow{5}{*}{\textit{Inter-sentential}} 
+& ``Buka aplikasinya dulu. \textit{Then sign in with your company account}.'' \\
+& ``Kita mulai jam dua. \textit{After that, we'll move to the Q\&A}.'' \\
+& ``Silakan isi formulir. \textit{If anything is unclear, contact us}.'' \\
+& ``Gunakan pintu samping. \textit{Security will guide you from there}.'' \\
+& ``Dokumen ringkas ada di email. \textit{Full details are in the appendix}.'' \\
+\midrule
+
+\multirow{4}{*}{\textit{Intra-sentential}} 
+& ``Setelah \textit{login}, buka \textit{settings} lalu aktifkan \textit{two-factor authentication}.'' \\
+& ``Ambil \textit{elevator} ke lantai tiga, lalu belok kanan ke \textit{records office}.'' \\
+& ``Pastikan \textit{dataset}-nya sudah di-\textit{clean} sebelum \textit{deploy}.'' \\
+& ``Kalau \textit{deadline}-nya maju, kita \textit{rescope deliverable} utama.'' \\
+\midrule
+
+\multirow{4}{*}{\textit{Tag-switching}} 
+& ``Sudah cek lampiran, \textit{okay}?'' \\
+& ``Itu masih fleksibel, \textit{right}?'' \\
+& ``Tolong percepat \textit{handover}-nya, \textit{please}.'' \\
+& ``Kalau ragu, tanya di kanal \textit{support}, \textit{deal}?'' \\
+
+\bottomrule
+\end{tabular}
+\endgroup
+\end{table}
+
+Teori batas perpindahan menyoroti bahwa tidak semua titik di dalam struktur kalimat sama-sama aman untuk dicampur. Secara umum terdapat larangan kuat pada batas morfem terikat, misalnya afiks bahasa Indonesia yang langsung menempel pada bentuk dasar bahasa Inggris, serta kehati-hatian pada batas frasa yang membawa fungsi gramatikal penting. Dalam kerangka \textit{matrix language} dan \textit{embedded language}, satu bahasa berperan sebagai \textit{matrix} yang memasok kerangka morfosintaks global yang mencakup urutan kata dasar, infleksi, penandaan aspek, dan elemen fungsi gramatikal lain. Bahasa lain hadir sebagai unsur tersisip (\textit{embedded}) yang biasanya berupa konten leksikal seperti nomina konkret, nama tempat, dan label objek. Dengan demikian, afiks dan penandaan fungsi gramatikal diharapkan mengikuti bahasa \textit{matrix}, sedangkan bahasa \textit{embedded} lebih aman jika dimasukkan sebagai unit leksikal bebas tanpa diinfleksikan menurut morfologi bahasa Indonesia \parencite{winata2023decades}. Akibatnya, \textit{code-switch} di posisi inti internal kata, misalnya menyisipkan leksem Inggris lalu menambahkan afiks derivatif Indonesia yang tidak sesuai, dipandang berisiko tinggi karena berpotensi melanggar batas morfologi. Sementara itu, sisipan pada posisi leksikal bebas seperti nomina \textit{landmark} atau nama ruangan cenderung dinilai aman, karena tidak mengganggu integritas morfosintaks bahasa \textit{matrix} \parencite{winata2023decades}.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=1.0\linewidth]{images/cs-summary.png}
+  \caption{Peta Konsep Tipologi \textit{Code-Switching} Indonesia–Inggris}
+  \label{fig:cs-mindmap}
+\end{figure}
+
+Dalam konteks bahasa Indonesia, motivasi sosiolinguistik untuk \textit{code-switching} Indonesia-Inggris tidak hanya bersifat gaya, tetapi juga berkaitan dengan identitas sosial, domain penggunaan, dan strategi efisiensi kognitif. Pertama, penutur sering menggunakan unsur bahasa Inggris untuk mengindeks identitas profesional atau afiliasi komunitas tertentu, misalnya lingkungan kampus, kantor multinasional, atau komunitas permainan daring, sehingga pemilihan bahasa menjadi sinyal keanggotaan kelompok. Kedua, terdapat penyesuaian domain. Istilah teknis dan fasilitas bangunan sering kali tersedia, terdokumentasi, atau ditempel sebagai penanda ruangan dalam bahasa Inggris, sehingga mempertahankannya dalam bentuk asli dianggap lebih akurat dan ekonomis bagi pendengar \parencite{Tazakka2024}. Ketiga, ada keuntungan efisiensi kognitif karena penutur tidak perlu melakukan pencarian padanan leksikal lokal yang mungkin kurang dikenal atau malah memperkenalkan ambiguitas baru. Dalam instruksi navigasi untuk VLN, pola \textit{code-switch} ini sangat berguna. Bahasa Indonesia mempertahankan kejelasan tindakan prosedural langkah demi langkah, sementara nama objek fisik dan \textit{landmark} dibiarkan dalam bahasa Inggris agar agen tidak keliru mengenali referen fisik di lingkungan \parencite{gu2022vision}. Masalahnya, masih jarang ada \textit{dataset} navigasi \textit{code-switch} yang menyediakan kontrol pola dan rasio secara eksplisit; banyak \textit{benchmark} VLN dan lingkungan \textit{embodied} populer fokus pada monolingual/multilingual tanpa pengaturan rasio \textit{switch} yang terkontrol \parencite{gu2022vision,HM3D2021}.
+
+\vspace{0.5em}
+
+\subsection{Pemodelan Komputasional}
+\label{subsec:pemodelan-komputasional}
+
+\textit{Code-switching} Indonesia--Inggris pada instruksi navigasi menuntut pemisahan bahasa yang stabil:
+istilah \textit{landmark} perlu dipertahankan spesifik (sering berbahasa Inggris), sementara struktur tindakan/prosedur
+tetap mudah diikuti (umumnya berbahasa Indonesia). Karena itu, \textit{language identification} per-token (LID)
+dimodelkan sebagai \textit{sequence labeling}: sebuah \textit{encoder} kontekstual (misal BiLSTM/Transformer) menghasilkan
+representasi token yang kemudian diprediksi sebagai label bahasa, dengan opsi pemodelan terstruktur (misal CRF)
+untuk menghindari pergantian label yang terlalu rapat \parencite{winata2023decades,Handoyo2024,dhawan2023unified,kargaran2024masklid}.
+
+Diberikan himpunan data latih
+$\mathcal{D}=\{(x^{(i)}_{1:T_i},y^{(i)}_{1:T_i})\}_{i=1}^{N}$ berisi $N$ sekuens. Sekuens ke-$i$ memiliki panjang
+$T_i\in\mathbb{N}$, token masukan $x^{(i)}_{1:T_i}=(x^{(i)}_1,\dots,x^{(i)}_{T_i})$, dan label kebenaran
+$y^{(i)}_{1:T_i}=(y^{(i)}_1,\dots,y^{(i)}_{T_i})$. Himpunan label bahasa dinyatakan sebagai
+$\mathcal{Y}=\{\textsf{id},\textsf{en}\}$. Representasi kontekstual token pada posisi $t$ didefinisikan oleh \textit{encoder} berparameter $\theta$ sebagaimana pada
+\eqref{eq:encoder242}:
+\begin{equation}
+\label{eq:encoder242}
+h^{(i)}_t=f_\theta\!\big(x^{(i)}_{1:T_i},t\big)\in\mathbb{R}^d,
+\end{equation}
+dengan $d$ dimensi \textit{embedding} dan $\mathbb{R}$ himpunan bilangan real. Untuk memetakan representasi $h$ ke skor label,
+\textit{scoring head} $g_\omega:\mathbb{R}^d\to\mathbb{R}^{|\mathcal{Y}|}$ (misal proyeksi linear) menghasilkan vektor skor,
+dan skor emisi untuk label $y$ adalah komponen vektor tersebut:
+\begin{equation}
+\label{eq:skoremisi242}
+g_\omega(h)\doteq Wh+b,\qquad
+s_{\omega}(y,h)\doteq \bigl(g_\omega(h)\bigr)_y,
+\end{equation}
+dengan $W\in\mathbb{R}^{|\mathcal{Y}|\times d}$ dan $b\in\mathbb{R}^{|\mathcal{Y}|}$.
+
+Agar notasi transisi valid pada $t=1$,
+didefinisikan label awal $y_0=\langle\textsc{bos}\rangle$ dan himpunan label diperluas menjadi
+$\widetilde{\mathcal{Y}}=\{\langle\textsc{bos}\rangle\}\cup\mathcal{Y}$.
+Matriks transisi $A\in\mathbb{R}^{|\widetilde{\mathcal{Y}}|\times|\mathcal{Y}|}$ memiliki entri $A_{y',y}$ yang
+menyatakan preferensi berpindah dari label sebelumnya $y'\in\widetilde{\mathcal{Y}}$ ke label saat ini $y\in\mathcal{Y}$.
+Seluruh parameter CRF-LID diringkas sebagai $\vartheta \doteq (\theta,\omega,A)$, dengan simbol ``$\doteq$'' berarti
+``didefinisikan sebagai''.
+(Opsi tambahan yang lazim adalah menambahkan state akhir $\langle\textsc{eos}\rangle$ untuk memodelkan transisi terakhir,
+namun tidak esensial untuk pelabelan per-token pada formulasi ini.)
+
+Probabilitas sekuens label pada CRF \textit{linear-chain} untuk satu sekuens $(x_{1:T},y_{1:T})$ dinyatakan pada
+\eqref{eq:lid_nll1}, dengan representasi $h_t$ diambil dari \textit{encoder} dan transisi menggunakan $A_{y_{t-1},y_t}$:
+\begin{equation}
+\label{eq:lid_nll1}
+\begin{aligned}
+p_{\vartheta}\!\big(y_{1:T}\mid x_{1:T}\big)
+&=\frac{\exp\!\Big(\sum_{t=1}^{T}\big[s_{\omega}(y_t,h_t)+A_{y_{t-1},y_t}\big]\Big)}
+{Z_{\vartheta}(x_{1:T})},\\
+h_t&=f_{\theta}(x_{1:T},t),
+\qquad
+y_0=\langle\textsc{bos}\rangle.
+\end{aligned}
+\end{equation}
+Faktor normalisasi (\textit{partition function}) yang menormalkan probabilitas pada \eqref{eq:lid_nll1} didefinisikan pada
+\eqref{eq:lid_nll12}:
+\begin{equation}
+\label{eq:lid_nll12}
+\begin{aligned}
+Z_{\vartheta}(x_{1:T})
+&=\sum_{y'_{1:T}\in\mathcal{Y}^{T}}
+\exp\!\Big(\sum_{t=1}^{T}\big[s_{\omega}(y'_t,h_t)+A_{y'_{t-1},y'_t}\big]\Big),
+\qquad y'_0=\langle\textsc{bos}\rangle.
+\end{aligned}
+\end{equation}
+Pada \eqref{eq:lid_nll12}, $\mathcal{Y}^{T}$ menyatakan himpunan semua sekuens label panjang $T$ (yakni \textit{cartesian power}),
+dan $y'_{1:T}$ adalah variabel \textit{dummy} untuk menjumlahkan seluruh kemungkinan sekuens label.
+Objektif pelatihan berupa \textit{negative log-likelihood} (NLL) dinormalisasi per sekuens didefinisikan pada
+\eqref{eq:lid_nll3}:
+\begin{equation}
+\label{eq:lid_nll3}
+L_{\text{LID}}(\vartheta)
+= -\frac{1}{N}\sum_{i=1}^{N}\log p_{\vartheta}\!\big(y^{(i)}_{1:T_i}\mid x^{(i)}_{1:T_i}\big).
+\end{equation}
+
+\textit{Encoder} menyediakan fitur kontekstual $h_t$ untuk tiap token, emisi $s_\omega(y_t,h_t)$ mendukung keputusan label lokal,
+dan transisi $A_{y_{t-1},y_t}$ memberi bias agar label tidak bolak-balik terlalu rapat, sehingga segmen bahasa cenderung utuh.
+
+Normalisasi per token (misal membagi dengan $\sum_i T_i$) juga lazim dipakai bila ingin menyeimbangkan kontribusi sekuens panjang dan pendek,
+tanpa mengubah bentuk dasar pada \eqref{eq:lid_nll3}. Komponen transisi $A_{y_{t-1},y_t}$ yang muncul pada \eqref{eq:lid_nll1}
+mengatur preferensi agar segmen bahasa cenderung utuh, sehingga \textit{switching} tidak terjadi di setiap token
+\parencite{kargaran2024masklid,winata2023decades}. Jika dependensi antarlabel tidak diinginkan, model menjadi kasus khusus dengan meniadakan
+peran transisi (misal menetapkan $A=0$), sehingga \eqref{eq:lid_nll1} memfaktorkan prediksi per token melalui emisi saja dan ekuivalen dengan
+klasifikasi token independen berbasis \textit{softmax} atas skor $g_\omega(h_t)$.
+
+Untuk pembangkitan instruksi VLN, selain kelancaran, diperlukan dua kendali operasional: (i) rasio bahasa agar porsi Inggris cukup untuk menyebut
+\textit{landmark} tanpa mengaburkan prosedur berbahasa Indonesia, dan (ii) kepatuhan batas morfologi Indonesia agar sisipan Inggris tidak melekat
+pada afiks terikat. Kendali ini dapat diimplementasikan pada tahap dekoding sebagai penalti/kendala, misalnya melalui automata untuk kamus
+\textit{landmark} dan aturan morfologi \parencite{Koo2024AutomataConstraints,BeurerKellner2024Domino}.
+Dalam praktik, penalti dapat dihitung \emph{post-hoc} untuk \textit{re-ranking} kandidat hasil \textit{beam search}, atau secara \emph{incremental}
+selama pencarian (misal mengukur pelanggaran pada prefiks sekuens).
+
+Misalkan sebuah model generatif berparameter $\phi$ memberi skor log-probabilitas $\log p_{\phi}(w\mid c)$ untuk konteks VLN $c$, dengan
+$w\in\mathcal{V}^*$ sekuens token dari kosakata $\mathcal{V}$. Kosakata $\mathcal{V}$ mencakup token khusus \textsc{eos} (\textit{end-of-sequence})
+yang menandai berhenti, dan $\mathcal{V}^*$ menyatakan himpunan semua sekuens hingga panjang berhingga dari token $\mathcal{V}$.
+Untuk menghindari bias keluaran pendek, definisikan sekuens tanpa token \textsc{eos} sebagai
+$w_{\neg \text{\textsc{eos}}}$ (yakni $w$ setelah menghapus token \textsc{eos}). Normalisasi panjang pada token non-\textsc{eos}:
+\begin{equation}
+  \label{eq:normalizenoneos}
+  T(w)\doteq |w_{\neg \text{\textsc{eos}}}|,\qquad
+  \ell_{\phi}(w;c)\doteq \frac{1}{T(w)}\log p_{\phi}(w\mid c).
+\end{equation}
+
+Rasio Inggris dihitung sebagai proporsi token pada $w_{\neg \textsc{eos}}$ yang diprediksi berlabel $\textsf{en}$ oleh modul LID (misal CRF pada
+\eqref{eq:lid_nll1}--\eqref{eq:lid_nll12} atau aturan leksikon konsisten), dan didefinisikan eksplisit pada \eqref{eq:rho_en_def}:
+\begin{equation}
+\label{eq:rho_en_def}
+\rho_{\text{en}}(w)\doteq \frac{1}{T(w)}\sum_{t=1}^{T(w)} \mathbf{1}[\hat{y}_t=\textsf{en}],
+\end{equation}
+dengan $\hat{y}_{1:T(w)}$ sekuens label hasil LID untuk token pada $w_{\neg \textsc{eos}}$, dan $\mathbf{1}[\cdot]$ fungsi indikator bernilai 1 jika kondisi
+benar dan 0 jika salah. Target rasio dinyatakan sebagai $\rho^\star\in[0,1]$, dan deviasi rasio didefinisikan pada \eqref{eq:delta_rho}:
+\begin{equation}
+\label{eq:delta_rho}
+\Delta_{\rho}(w)\doteq \bigl|\rho_{\text{en}}(w)-\rho^\star\bigr|.
+\end{equation}
+
+Kepatuhan terhadap kamus \textit{landmark} dan batas morfologi dirangkum oleh dua penguji boolean
+$\mathrm{FA}:\mathcal{V}^*\to\{\text{true},\text{false}\}$ dan $\mathrm{MORPH}:\mathcal{V}^*\to\{\text{true},\text{false}\}$.
+Secara operasional, $\mathrm{FA}(w)$ dapat diimplementasikan sebagai automata/\textit{gazetteer} yang memvalidasi kemunculan entitas \textit{landmark}
+(terutama \textsf{en}) sesuai daftar dan batas kata; sedangkan $\mathrm{MORPH}(w)$ memeriksa larangan afiks Indonesia melekat pada sisipan Inggris.
+Contoh pelanggaran morfologi mencakup bentuk seperti \textit{di-turn}, \textit{turn-kan}, \textit{left-nya}, atau \textit{parkingnya},
+yakni ketika prefiks/sufiks terikat Indonesia melekat pada token yang semestinya dipertahankan sebagai \textit{landmark}/kata Inggris.
+Pada praktiknya, pemeriksaan ini biasanya dilakukan pada bentuk kata (setelah detokenisasi ringan atau pada batas \textit{wordpiece} yang stabil)
+agar tidak salah menghukum pemenggalan subkata oleh BPE.
+
+Pelanggaran keduanya dirumuskan sebagai indikator pada \eqref{eq:delta_fa_morph}:
+\begin{equation}
+\label{eq:delta_fa_morph}
+\Delta_{\mathrm{FA}}(w)\doteq 1-\mathbf{1}[\mathrm{FA}(w)],\qquad
+\Delta_{\mathrm{MORPH}}(w)\doteq 1-\mathbf{1}[\mathrm{MORPH}(w)],
+\end{equation}
+sehingga $\Delta_{\mathrm{FA}}(w),\Delta_{\mathrm{MORPH}}(w)\in\{0,1\}$.
+
+Dengan bobot penalti $\lambda=\{\lambda_{\rho},\lambda_{\mathrm{FA}},\lambda_{\mathrm{MORPH}}\}$ (umumnya
+$\lambda_{\rho},\lambda_{\mathrm{FA}},\lambda_{\mathrm{MORPH}}\ge 0$), penalti total didefinisikan pada \eqref{eq:total_penalty}:
+\begin{equation}
+\label{eq:total_penalty}
+\Omega_{\lambda}(w)\doteq
+\lambda_{\rho}\,\Delta_{\rho}(w)
++\lambda_{\mathrm{FA}}\,\Delta_{\mathrm{FA}}(w)
++\lambda_{\mathrm{MORPH}}\,\Delta_{\mathrm{MORPH}}(w).
+\end{equation}
+Keluaran terpilih $\hat{w}$ kemudian diperoleh melalui dekoding berpenalti pada \eqref{eq:vln_decode}:
+\begin{equation}
+\label{eq:vln_decode}
+\hat{w}
+=\arg\max_{w\in\mathcal{V}^*}
+\Bigl\{
+\ell_{\phi}(w;c)-\Omega_{\lambda}(w)
+\Bigr\}.
+\end{equation}
+Pada \eqref{eq:vln_decode}, penalti rasio $\lambda_{\rho}$ mendorong komposisi bahasa mendekati target $\rho^\star$,
+sedangkan $\lambda_{\mathrm{FA}}$ dan $\lambda_{\mathrm{MORPH}}$ menurunkan skor kandidat yang melanggar kamus \textit{landmark} atau aturan
+morfologi. Kendala keras dapat dipandang sebagai kasus batas dengan menaikkan penalti pelanggaran hingga sangat besar, atau dengan membatasi ruang
+pencarian hanya pada kandidat yang memenuhi kendala; target $\rho^\star$ juga dapat ditala sesuai lingkungan \parencite{BeurerKellner2024Domino,Willard2023Outlines}.
+Secara komputasional, optimisasi \eqref{eq:vln_decode} umumnya didekati dengan \textit{beam search} atau sampling terkontrol, lalu kandidat di-\textit{re-rank}
+menggunakan penalti di atas.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.7\linewidth]{images/embedding_plane_3d_scatter_complex.pdf}
+  \caption{Ruang \textit{Embedding} 3D Token yang Memperlihatkan Subklaster Bahasa Indonesia dan Inggris, Bidang Keputusan Perkiraan, Serta Lintasan \textit{Code-Switching} Antarwilayah (Skema Konseptual)}
+  \label{fig:lid-embedding-space}
+\end{figure}
+
+Gambar~\ref{fig:lid-embedding-space} bersifat ilustratif untuk menunjukkan intuisi di balik LID:
+token cenderung membentuk subklaster berbeda untuk Indonesia dan Inggris pada ruang \textit{embedding}, sehingga sebuah bidang keputusan perkiraan
+dapat memisahkan wilayah label secara relatif stabil. Lintasan \textit{code-switching} tampak sebagai pergerakan representasi yang menyeberangi batas
+antarwilayah (bukan loncatan acak di setiap token), selaras dengan tujuan pada \eqref{eq:lid_nll1}--\eqref{eq:lid_nll3} untuk menghasilkan segmen bahasa
+yang koheren. Secara ringkas, pemisahan berbasis representasi mempermudah keputusan lokal melalui emisi pada \eqref{eq:skoremisi242}, sementara (ketika digunakan)
+komponen transisi $A$ pada \eqref{eq:lid_nll1} menstabilkan batas segmen agar tidak terlalu rapat \parencite{winata2023decades,dhawan2023unified,kargaran2024masklid}.
+
+Agar relevan untuk VLN, keluaran LID tidak berhenti pada label bahasa.
+Token berlabel \textsf{id} dipetakan ke predikat tindakan dan relasi spasial (instruksi prosedural) yang stabil bagi \textit{planner},
+sedangkan token berlabel \textsf{en} menandai entitas fisik/\textit{landmark} yang dipertahankan apa adanya untuk mengurangi ambiguitas \textit{grounding}
+perseptual \parencite{gu2022vision}.
+
+Secara praktis, ketahanan LID diperkuat oleh representasi subkata/karakter untuk menangani variasi ejaan dan OOV pada nama ruang
+\parencite{winata2023decades,dhawan2023unified,kargaran2024masklid}. Pemeriksaan morfologi ringan dapat mencegah pelabelan \textsf{en} pada token yang jelas
+berafiks Indonesia, konsisten dengan kendala morfologis pada \eqref{eq:vln_decode} \parencite{winata2023decades,Koo2024AutomataConstraints,BeurerKellner2024Domino}.
+Leksikon domain/\textit{gazetteer} dapat menambah bias positif untuk istilah \textit{landmark}, namun tetap harus tunduk pada kepatuhan batas kata agar tidak
+memicu sisipan yang tidak gramatikal \parencite{Koo2024AutomataConstraints,BeurerKellner2024Domino}.
+
+\vspace{0.5em}
+
+\section{\textit{LLM in-the-loop} untuk Pembangkitan Data}
+
+\vspace{0.5em}
+
+\subsection{Konsep Umum dan Peran LLM sebagai Pembangkit Instruksi}
+
+\textit{Large Language Models} (LLM) seperti GPT-4, LLaMA, dan Qwen menunjukkan kemampuan generatif yang kuat dalam berbagai tugas pemrosesan bahasa alami melalui antarmuka berbasis \textit{prompt} \parencite{Touvron2023,Dubey2024,qwen25,Mienye2025LargeLanguageModels}. Dalam penelitian ini, istilah \textit{LLM in-the-loop} untuk pembangkitan data merujuk pada penggunaan LLM sebagai komponen aktif di dalam sebuah \textit{pipeline} pembangkitan data, bukan hanya sebagai model inferensi yang menjawab kueri siap pakai. LLM dipanggil berulang kali untuk mensintesis data baru, seperti pasangan instruksi dan trajektori, instruksi dan konteks visual, atau deskripsi langkah-langkah, berdasarkan konteks struktural yang diberikan oleh sistem.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{images/ptheta_space_theoretical_v2.pdf}
+    \caption{Ilustrasi Ruang Instruksi $p_{\theta}(x \mid c)$ dan Subhimpunan Instruksi Valid $\mathcal{X}_{\mathrm{valid}}(c)$ yang Dihasilkan Melalui Struktur Tambahan Dalam Konteks, Seperti Rencana Eksplisit, Informasi Semantik Visual, Serta Filter Heuristik.}
+    \label{fig:ptheta-space}
+\end{figure}
+
+Gambar~\ref{fig:ptheta-space} mengilustrasikan ruang keluaran instruksi yang dapat dihasilkan oleh LLM, yang dimodelkan sebagai distribusi generatif $p_{\theta}(x\mid c)$ pada konteks $c$. Sumbu horizontal merepresentasikan \textit{plan fidelity} (seberapa selaras instruksi dengan urutan rencana/aksi), sedangkan sumbu vertikal merepresentasikan \textit{style/lexical diversity} (keragaman gaya dan pilihan leksikal). Elips besar menggambarkan keseluruhan dukungan (ragam) instruksi yang mungkin muncul dari $p_{\theta}(x\mid c)$, sementara elips putus-putus di dalamnya merepresentasikan subhimpunan instruksi valid $\mathcal{X}_{\mathrm{valid}}(c)$ yang memenuhi kendala keselarasan rencana, korespondensi entitas, dan aturan format. Panah menunjukkan bahwa penambahan struktur dalam konteks (misalnya rencana eksplisit, informasi semantik visual, serta \textit{filter} heuristik) berfungsi sebagai mekanisme pengarah yang memperkecil ruang efektif keluaran menuju area yang lebih valid, sehingga instruksi yang dihasilkan cenderung lebih dapat dieksekusi tanpa mengorbankan keragaman secara berlebihan.
+
+Pembedaan antara LLM sebagai model inferensi dan LLM sebagai pembangkit data penting untuk memperjelas kontribusi arsitektur semacam ini. Pada skenario inferensi klasik, LLM menerima masukan berupa teks (misalnya pertanyaan atau perintah) dan menghasilkan keluaran tunggal yang langsung digunakan pengguna. Sebaliknya, pada skenario \textit{in-the-loop} untuk pembangkitan data, keluaran LLM diperlakukan sebagai bahan baku: ia dikumpulkan, diformat, dan disaring untuk kemudian menjadi bagian dari korpus pelatihan, \textit{benchmark}, atau antarmuka instruksi bagi agen lain (misalnya agen navigasi). Dengan demikian, LLM berperan sebagai mesin generatif berskala besar yang beroperasi di atas representasi simbolik dari lingkungan dan tugas, bukan sebagai modul jawaban sekali pakai.
+
+Dalam domain VLN, kebutuhan akan instruksi berkualitas tinggi dan beragam telah lama diidentifikasi sebagai faktor kunci dalam kinerja agen\parencite{anderson2018r2r,ku2020rxr,qi2020reverie,thomason2020cvdn,chen2019touchdown}. Dataset seperti R2R, RxR, REVERIE, dan CVDN mengilustrasikan bagaimana pasangan trajektori--instruksi dikumpulkan dan dikurasi secara manual sebelum berkembang menjadi \textit{benchmark} standar\parencite{anderson2018r2r,ku2020rxr,qi2020reverie,thomason2020cvdn}. Survei terbaru menunjukkan bahwa ekosistem VLN semakin bergeser ke arah pemanfaatan model fondasi dan LLM untuk mengurangi biaya anotasi manual dan memperkaya variasi instruksi, termasuk pada pengaturan lingkungan kontinu dan tugas jangka panjang\parencite{gu2022vision,Zhang2024,Song2025}. Dalam kerangka ini, \textit{LLM in-the-loop} diposisikan sebagai pengganti atau pelengkap anotator manusia dalam menghasilkan deskripsi bahasa natural yang konsisten dengan trajektori dan konteks visual.
+
+Salah satu pola yang banyak diadopsi adalah penggunaan LLM \textit{pre-trained} sebagai pembangkit instruksi berbasis \textit{prompt}, tanpa melakukan perubahan parameter model. Pendekatan ini sejalan dengan paradigma di mana model yang sudah dilatih berskala besar dimanfaatkan kembali untuk menghasilkan instruksi atau caption baru hanya melalui desain \textit{prompt} dan pemberian contoh (\textit{in-context learning})\parencite{Mienye2025LargeLanguageModels}. Dalam pengaturan ini, LLM dikondisikan pada deskripsi tugas, skema lingkungan, atau meta-data simbolik lain, kemudian diminta untuk menghasilkan instruksi, penjelasan, atau deskripsi skenario. Keluaran LLM dapat digunakan sebagai data pelatihan tambahan, sebagai set instruksi sintetis untuk evaluasi, atau sebagai komponen tekstual yang diberikan kepada agen navigasi.
+
+Literatur di luar VLN telah mengeksplorasi skema di mana LLM diminta menghasilkan instruksi dari beberapa contoh awal dan deskripsi tugas, misalnya dalam kerangka pembangkitan instruksi otomatis seperti Self-Instruct\parencite{wang2023selfinstruct}. Meskipun karya tersebut pada akhirnya menggunakan instruksi sintetis untuk membangun model lain, bagian yang relevan bagi penelitian ini adalah bukti bahwa LLM yang dibekukan mampu menghasilkan instruksi beranotasi diri dalam jumlah besar dengan hanya mengandalkan desain \textit{prompt} dan beberapa contoh acuan. Survei LLM dan model fondasi juga menekankan bahwa kontrol berbasis \textit{prompt} terhadap gaya, struktur, dan isi keluaran merupakan karakteristik inti dari model-model ini\parencite{Mienye2025LargeLanguageModels,Kuchemann2025}.
+
+Dalam VLN dan tugas \textit{embodied} lain, terdapat tradisi sebelumnya dalam membangkitkan instruksi dari trajektori melalui model \textit{speaker} yang memetakan urutan aksi ke bahasa natural\parencite{anderson2018r2r}. Model-model tersebut biasanya dilatih secara \textit{supervised} di atas korpus trajektori--instruksi yang sudah ada. \textit{LLM in-the-loop} dapat dipandang sebagai generalisasi dari ide \textit{speaker}: representasi trajektori atau rencana (misalnya urutan tindakan navigasi, waypoint, dan objek yang dikunjungi) disuplai sebagai konteks teks kepada LLM, yang kemudian menghasilkan instruksi yang menjelaskan cara mengeksekusi trajektori tersebut. Bedanya, LLM tidak dibatasi oleh ruang pelatihan dataset awal dan mampu menggabungkan pengetahuan dunia yang luas, gaya bahasa variatif, serta kemampuan multibahasa.
+
+Dimensi penting lain dari penggunaan \textit{LLM in-the-loop} adalah \textit{planning-aware \textit{prompt}ing}, yaitu strategi pemberian konteks di mana LLM tidak hanya menerima deskripsi global tugas, tetapi juga struktur rencana atau urutan aksi eksplisit. Karya-karya di domain penalaran menggunakan LLM, seperti Plan-and-Solve \textit{Prompt}ing dan ReAct, menunjukkan bahwa memisahkan langkah perencanaan dan aksi, atau menggabungkan penalaran dengan tindakan eksplisit, dapat meningkatkan konsistensi dan interpretabilitas keluaran model\parencite{Lu2023PlanSolve,Yao2023ReAct}. Diadaptasikan ke konteks VLN, ide ini berarti bahwa konteks $c$ yang diberikan ke LLM tidak hanya berupa deskripsi lingkungan, tetapi juga urutan langkah simbolik (misalnya TURN-LEFT, GO-FORWARD, ENTER-KITCHEN) dan daftar objek atau ruangan yang relevan.
+
+Secara konseptual, LLM kemudian dimodelkan sebagai distribusi generatif yang dituliskan sebagai Persamaan~\ref{eq:distribusi_generatif}:
+\begin{equation}
+  \label{eq:distribusi_generatif}
+x \sim p_{\theta}(x \mid c),
+\end{equation}
+di mana $x$ adalah instruksi bahasa natural dan $c$ mencakup rencana/urutan aksi, informasi objek, serta deskripsi semantik lingkungan. Hal ini dapat diilustrasikan sebagai Gambar~\ref{fig:ptheta-space} dan Gambar~\ref{fig:instruction-manifold}. Tujuan perancangan \textit{prompt} adalah memastikan bahwa $x$ memelihara urutan langkah yang tepat, menjaga korespondensi antara aksi simbolik dan deskripsi natural, serta menghasilkan instruksi yang dapat dieksekusi oleh agen di dalam simulator atau lingkungan nyata. Survei VLN menekankan bahwa menjaga keselarasan antara representasi trajektori, instruksi, dan dinamika lingkungan menjadi kunci keberhasilan agen dalam pengaturan kontinu dan jangka panjang\parencite{wijmans2020vlnce,KrantzVLNCE,Zhang2024,Song2025}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\linewidth]{images/instruction_manifold.png}%
+    % ganti dengan nama file gambar kamu, tanpa ekstensi jika pakai pdf/png
+    \caption{Ilustrasi Ruang Instruksi dan Subhimpunan Instruksi Valid Yang Dikondisikan Pada Konteks.}
+    \label{fig:instruction-manifold}
+\end{figure}
+
+Gambar~\ref{fig:instruction-manifold} memformalkan gagasan bahwa, untuk setiap konteks $c$, hanya sebagian kecil dari ruang instruksi yang benar-benar valid dan relevan. Titik $c$ melambangkan sebuah konteks (misalnya kombinasi lingkungan, tujuan, dan rencana), sementara ruang abu-abu merepresentasikan kandidat instruksi yang mungkin dihasilkan pada ruang representasi (misalnya koordinat laten atau fitur linguistik). Wilayah bertanda $\mathcal{X}_{\mathrm{valid}}$ menunjukkan \textit{manifold} atau subruang instruksi yang konsisten dengan konteks tersebut, yaitu instruksi yang menyebut entitas valid, selaras dengan urutan aksi, dan tidak melanggar batasan tugas. Panah dari $c$ menuju $\mathcal{X}_{\mathrm{valid}}$ menekankan peran pengondisian (melalui \textit{prompt} dan struktur konteks) sebagai pemetaan yang “mengunci” generasi agar berfokus pada subhimpunan yang dapat dieksekusi, sehingga proses \textit{LLM in-the-loop} dapat dipahami sebagai upaya sistematis untuk mendekatkan sampel $x\sim p_{\theta}(x\mid c)$ ke wilayah valid alih-alih menjelajah ruang instruksi secara bebas.
+
+\vspace{0.5em}
+
+\subsection{Kontrol Output, Integrasi Semantik, dan Filter Heuristik}
+
+Di luar struktur rencana, keberhasilan skema \textit{LLM in-the-loop} sangat bergantung pada kemampuan untuk mengontrol gaya, format, dan leksikon keluaran melalui desain \textit{prompt}. Laporan teknis GPT-4 dan dokumentasi model fondasi lain menunjukkan bahwa instruksi mengenai persona, tingkat formalitas, jenis register, dan struktur output (misalnya daftar bernomor, format JSON, atau paragraf tunggal) dapat diikuti cukup konsisten oleh model berskala besar\parencite{Touvron2023,Dubey2024,qwen25}. Survei tentang LLM juga mencatat bahwa kontrol semacam ini biasanya dicapai sepenuhnya di tingkat \textit{prompt} dan contoh dalam konteks, tanpa perlu mengubah parameter model\parencite{Mienye2025LargeLanguageModels}. Dalam pengaturan pembangkitan data, hal ini memungkinkan peneliti menspesifikasikan dengan eksplisit bahwa instruksi harus, misalnya, terdiri dari satu paragraf pendek, menghindari istilah teknis, atau mengikuti format penomoran langkah-langkah aksi.
+
+Kontrol terhadap leksikon dan gaya dapat diperluas ke ranah multibahasa maupun \textit{code-switching}. Literatur mengenai \textit{code-switching} dalam NLP dan pengolahan wicara menunjukkan bahwa pencampuran bahasa mengikuti pola sintaktis dan pragmatis tertentu, serta dapat dievaluasi menggunakan berbagai metrik kompleksitas dan indeks campuran bahasa\parencite{winata2023decades,SrivastavaSingh2021CALCS,Chi2024TIndex,Suresh2025CSSum}. Penelitian tentang pengenalan dan sintesis wicara \textit{code-switching} juga menekankan pentingnya membedakan fungsi masing-masing bahasa untuk kategori kata tertentu, seperti penggunaan bahasa lokal untuk nama tempat atau objek, dan bahasa global untuk verba aksi atau kata kerja pendek \parencite{dhawan2023unified,Handoyo2024}. Temuan-temuan ini menyediakan dasar teoretis untuk memberi instruksi eksplisit kepada LLM agar menghasilkan teks dwibahasa atau \textit{code-switching} sesuai aturan yang ditetapkan, misalnya dengan menggunakan bahasa A (misalnya bahasa Indonesia) sebagai bahasa dominan untuk struktur kalimat dan narasi, menggunakan bahasa B (misalnya bahasa Inggris) untuk verba aksi atau istilah navigasi pendek (seperti \textit{turn left}, \textit{go straight}), serta mempertahankan rasio tertentu antara token dalam bahasa A dan bahasa B atau membatasi kemunculan istilah-istilah tertentu.
+
+Dalam skema \textit{LLM in-the-loop}, aturan-aturan ini diwujudkan langsung ke dalam \textit{prompt}, misalnya melalui instruksi tekstual yang menjelaskan proporsi bahasa, daftar kata yang boleh atau tidak boleh digunakan, serta contoh instruksi \textit{code-switching} yang diinginkan. Karena LLM modern telah dilatih pada korpus multibahasa berskala besar\parencite{Touvron2023,qwen25}, mereka umumnya mampu mengikuti pola \textit{code-switching} yang diminta tanpa modifikasi parameter. Hal ini memungkinkan pembangkitan dataset instruksi yang mencerminkan praktik bahasa pengguna akhir (misalnya penutur bilingual) sekaligus tetap terkontrol secara sistematis berdasarkan metrik dan prinsip linguistik dari literatur code-switching \parencite{winata2023decades,Chi2024TIndex,Suresh2025CSSum}.
+
+Aspek penting lain dari \textit{LLM in-the-loop} untuk tugas visi-bahasa adalah integrasi dengan informasi simbolik dan semantik yang diekstraksi dari lingkungan visual. Di ranah VLN, berbagai platform simulasi seperti Habitat dan Gibson menyediakan representasi terstruktur berupa peta 3D, graf navigasi, dan anotasi semantik ruangan/objek yang dapat diolah menjadi bentuk simbolik\parencite{savva2019habitat,szot2021habitat2,HM3D2021,xia2018gibson}. Dataset seperti HM3D dan turunan-turunannya lebih lanjut memperkaya lingkungan dengan label semantik yang padat\parencite{HM3D2021}. Survei VLN menekankan bahwa model modern cenderung memanfaatkan kombinasi representasi geometrik, semantik, dan bahasa untuk mencapai penalaran yang lebih kuat \parencite{gu2022vision,Zhang2024,Song2025}.
+
+Secara bersamaan, ekosistem model visi modern menyediakan komponen yang mampu mengekstraksi tag semantik serta struktur objek dari citra. CLIP, Recognize Anything, dan Tag2Text, misalnya, memanfaatkan hubungan antara teks dan visual untuk menghasilkan deskripsi objek atau kumpulan tag yang dapat digunakan sebagai kata kunci\parencite{radford2021clip,zhang2023recognize,huang2023tag2text,huang2023openset}. Segment Anything menghasilkan segmentasi objek yang dapat diterjemahkan menjadi daftar instansi lengkap dengan posisi dan kategorinya\parencite{kirillov2023segment}. Survei mengenai \textit{text-guided 3D visual grounding} juga menekankan pentingnya representasi simbolik dan semantik yang menghubungkan objek, ruang, dan deskripsi teks \parencite{liu2025visualgrounding}. Dalam kerangka \textit{LLM in-the-loop}, keluaran dari model visi tersebut dapat diubah menjadi representasi tekstual terstruktur, seperti daftar objek beserta atributnya atau rangkuman tag untuk setiap ruangan, yang kemudian diberikan kepada LLM sebagai bagian dari konteks $c$.
+
+Pola umum yang muncul adalah sebagai berikut: (i) sistem visi menghasilkan representasi simbolik (daftar objek, label ruangan, graf konektivitas, atau urutan aksi navigasi), (ii) representasi tersebut diformat ke dalam teks yang eksplisit (misalnya ``\textit{From the hallway, go past a red sofa into the kitchen with a large table}'') dan dilampirkan dalam \textit{prompt}, lalu (iii) LLM diminta untuk menghasilkan instruksi, penjelasan, atau narasi yang konsisten dengan representasi tersebut. Dengan cara ini, pemodelan visual tetap ditangani oleh model visi khusus, sementara LLM digunakan untuk melakukan penalaran dan perumusan instruksi di ruang teks, memanfaatkan kemampuannya dalam memahami struktur, koherensi diskursif, dan pengetahuan dunia\parencite{gu2022vision,Zhang2024,Song2025,radford2021clip,huang2023tag2text,liu2025visualgrounding}.
+
+Karena LLM beroperasi sebagai pembangkit yang relatif tidak terikat, dibutuhkan mekanisme untuk memastikan bahwa keluaran yang dihasilkan konsisten dengan pengetahuan struktural tentang lingkungan dan tugas. Alih-alih menggunakan penilai otomatis yang kompleks, banyak skema pembangkitan data berbasis LLM mengandalkan \textit{filter heuristik} sederhana yang sesuai dengan domain. Tradisi kurasi dataset VLN memberikan contoh awal: instruksi yang tidak menyebutkan objek penting, yang mengandung rujukan ke entitas tidak valid, atau yang tidak konsisten dengan trajektori sering kali dibuang atau diperbaiki melalui prosedur berbasis aturan dan verifikasi manual\parencite{anderson2018r2r,ku2020rxr,qi2020reverie}. Prinsip serupa dapat diadaptasi ke konteks \textit{LLM in-the-loop} dengan langkah-langkah seperti memeriksa apakah semua objek yang disebut dalam instruksi terdapat dalam daftar entitas valid yang diekstraksi dari lingkungan, memastikan bahwa struktur keluaran (misalnya format daftar langkah, JSON, atau pola frasa tertentu) memenuhi spesifikasi yang diberikan dalam \textit{prompt}, serta menyaring keluaran yang mengandung kata atau frasa yang dilarang (misalnya rujukan eksplisit ke informasi di luar lingkungan simulasi).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{images/fig_heuristic_filter.png}
+    \caption{Contoh Ruang Fitur Untuk Filter Heuristik Pada Keluaran \textit{LLM In-The-Loop}}
+    \label{fig:heuristic-filter}
+\end{figure}
+
+Gambar~\ref{fig:heuristic-filter} menunjukkan contoh ruang fitur sederhana untuk menerapkan \textit{filter heuristik} pada keluaran \textit{LLM in-the-loop}. Setiap titik merepresentasikan satu instruksi yang dihasilkan, dipetakan ke dua metrik: \textit{entity coverage} pada sumbu-$x$ (cakupan penyebutan entitas/objek relevan dari konteks) dan \textit{format compliance} pada sumbu-$y$ (kepatuhan terhadap spesifikasi format keluaran, misalnya pola langkah bernomor atau skema JSON). Garis putus-putus membentuk ambang batas minimal untuk kedua metrik, sehingga area kanan-atas menjadi \textit{accepted region} (instruksi diterima) karena memenuhi cakupan entitas dan kepatuhan format secara simultan, sedangkan titik di luar wilayah tersebut ditolak. Visualisasi ini menekankan bahwa filter heuristik tidak perlu menilai kualitas semantik secara penuh; cukup dengan indikator domain-spesifik yang mudah dihitung untuk menyingkirkan keluaran yang jelas tidak konsisten atau tidak dapat digunakan.
+
+Filter semacam ini tidak menilai kualitas instruksi secara semantik penuh, tetapi menjamin konsistensi dasar antara keluaran LLM dan struktur tugas. Dalam praktiknya, filter heuristik dapat digabungkan dengan desain \textit{prompt} yang hati-hati untuk mengurangi frekuensi keluaran yang melanggar aturan, sehingga sebagian besar pembangkit LLM langsung \textit{usable}, sementara sebagian kecil diperbaiki atau dibuang. Secara konseptual, prosedur ini dapat dipandang sebagai penetapan daerah keputusan pada ruang fitur yang menggabungkan cakupan entitas dan kepatuhan format, seperti ditunjukkan pada Gambar~\ref{fig:heuristic-filter}.
+
+\vspace{0.5em}
+
+\section{Metrik Evaluasi}
+\label{sec:metrik-evaluasi}
+Bagian ini mendeskripsikan metrik yang digunakan untuk mengevaluasi kualitas data
+LH-VLN \parencite{Song2025} serta
+karakteristik \textit{code-switching} (ID-EN) pada instruksi yang dihasilkan.
+Seluruh metrik dikelompokkan menjadi dua kategori utama:
+(i) metrik efektivitas--efisiensi navigasi dan tugas, serta
+(ii) metrik linguistik \textit{code-switching}.
+
+\vspace{0.5em}
+
+\subsection{Metrik Efektivitas dan Efisiensi Navigasi-Tugas}
+\label{subsec:nav_metrics}
+
+Untuk mengevaluasi efektivitas dan efisiensi penyelesaian tugas navigasi multi-tahap, penelitian ini menggunakan enam metrik utama, yaitu \textit{time cost}, \textit{fail tasks}, \textit{mean task step}, \textit{mean navigation step}, \textit{mean task success rate}, dan \textit{mean navigation success rate}. Misalkan $\mathcal{T}$ adalah himpunan seluruh tugas yang dieksekusi.
+
+\vspace{0.5em}
+
+\subsubsection{\textit{Time cost}}
+Time cost digunakan untuk mengukur efisiensi komputasi atau waktu eksekusi kebijakan navigasi. Untuk setiap tugas $j \in \mathcal{T}_{\text{eval}}$ (tugas yang berhasil dieksekusi di simulator), dicatat waktu mulai $t^{\text{start}}_j$, waktu selesai $t^{\text{end}}_j$, serta jumlah langkah navigasi total $N^{\text{step}}_j$ yang dibutuhkan untuk menyelesaikan seluruh sub-navigasi dalam tugas tersebut. Time cost rata-rata didefinisikan sebagai
+\begin{equation}
+    \text{TimeCost}
+    = \frac{1}{\left|\mathcal{T}_{\text{eval}}\right|}
+      \sum_{j \in \mathcal{T}_{\text{eval}}}
+      \frac{t^{\text{end}}_j - t^{\text{start}}_j}{N^{\text{step}}_j}.
+    \label{eq:time_cost}
+\end{equation}
+Dengan demikian, Persamaan~\ref{eq:time_cost} menyatakan rata-rata waktu per langkah navigasi, yang memungkinkan perbandingan efisiensi antar-tugas dengan panjang lintasan yang berbeda-beda.
+
+\vspace{0.5em}
+
+\subsubsection{\textit{Fail tasks}}
+Tidak semua instruksi tugas dapat dieksekusi dengan sukses, misalnya ketika target tidak dapat dijangkau oleh perencana lintasan. Himpunan tugas yang gagal didefinisikan sebagai kumpulan tugas yang tidak dapat diselesaikan dalam batasan yang dimiliki oleh sistem pemrosesan. Jumlah \textit{fail tasks} merujuk pada banyaknya elemen di dalam himpunan tersebut. Selain itu, deskripsi instruksi untuk setiap tugas yang gagal disimpan guna memungkinkan analisis kualitatif terhadap pola-pola kegagalan.
+
+\vspace{0.5em}
+
+\subsubsection{\textit{Mean task step}}
+Untuk setiap tugas yang selesai dengan sukses, total langkah yang dibutuhkan untuk menyelesaikan seluruh rangkaian sub-tugas dinotasikan sebagai $T_j = N^{\text{step}}_j$. Jika $\mathcal{S} \subseteq \mathcal{T}$ adalah himpunan tugas yang berhasil diselesaikan, dengan $N_{\text{succ}} = |\mathcal{S}|$, maka \textit{mean task step} didefinisikan sebagai
+\begin{equation}
+    \text{MeanTaskStep}
+    = \frac{1}{N_{\text{succ}}}
+      \sum_{j \in \mathcal{S}} T_j.
+    \label{eq:mean_task_step}
+\end{equation}
+Dengan kata lain, Persamaan~\ref{eq:mean_task_step} mengukur rata-rata panjang lintasan (dalam satuan langkah) untuk menyelesaikan satu tugas secara utuh.
+
+\vspace{0.5em}
+
+\subsubsection{\textit{Mean navigation step}}
+Satu tugas biasanya terdiri atas beberapa episode navigasi menuju objek-objek target perantara. Misalkan $L_{j,k}$ adalah jumlah langkah yang dibutuhkan pada navigasi ke-$k$ dari tugas $j$, dan himpunan seluruh navigasi berhasil yang teramati dinotasikan sebagai $\mathcal{N}$ dengan $N_{\text{nav}} = |\mathcal{N}|$. Maka \textit{mean nav step} didefinisikan sebagai
+\begin{equation}
+    \text{MeanNavStep}
+    = \frac{1}{N_{\text{nav}}}
+      \sum_{(j,k) \in \mathcal{N}} L_{j,k}.
+    \label{eq:mean_nav_step}
+\end{equation}
+Persamaan~\ref{eq:mean_nav_step} menangkap rata-rata panjang lintasan pada level satu episode navigasi (satu tujuan objek), sehingga lebih sensitif terhadap kesulitan tiap subtugas dibandingkan metrik pada tingkat tugas penuh.
+
+\vspace{0.5em}
+
+\subsubsection{\textit{Mean task success rate}}
+Efektivitas sistem pada tingkat tugas utuh diukur melalui \textit{task success rate}. Misalkan $N_{\text{task}}^{\text{valid}}$ adalah jumlah tugas yang dieksekusi secara valid (misalnya, seluruh tugas dikurangi tugas-tugas pada himpunan $\mathcal{F}$), maka \textit{mean task SR} didefinisikan sebagai
+\begin{equation}
+    \text{MeanTaskSR}
+    = \frac{N_{\text{succ}}}{N_{\text{task}}^{\text{valid}}}.
+    \label{eq:mean_task_sr}
+\end{equation}
+Dengan demikian, Persamaan~\ref{eq:mean_task_sr} menyatakan proporsi tugas yang berhasil diselesaikan sepenuhnya terhadap seluruh tugas yang benar-benar terealisasi di simulator.
+
+\vspace{0.5em}
+
+\subsubsection{\textit{Mean navigation success rate}}
+Selain keberhasilan pada tingkat tugas, penting pula untuk menilai seberapa sering agen berhasil mencapai setiap target perantara. Misalkan $N_{\text{nav}}^{\text{succ}}$ adalah jumlah episode navigasi yang selesai dengan sukses dan $N_{\text{nav}}^{\text{total}}$ adalah jumlah seluruh episode navigasi yang seharusnya dijalankan (misalnya berdasarkan panjang daftar objek target pada setiap tugas), maka \textit{mean nav SR} didefinisikan sebagai
+\begin{equation}
+    \text{MeanNavSR}
+    = \frac{N_{\text{nav}}^{\text{succ}}}{N_{\text{nav}}^{\text{total}}}.
+    \label{eq:mean_nav_sr}
+\end{equation}
+Persamaan~\ref{eq:mean_nav_sr} memberikan ukuran granular terhadap stabilitas dan keandalan agen dalam menyelesaikan setiap navigasi parsial, terlepas dari apakah seluruh rangkaian tugas berhasil diselesaikan.
+
+Kombinasi metrik pada Persamaan~\ref{eq:time_cost}--\ref{eq:mean_nav_sr} memungkinkan analisis yang seimbang antara efektivitas (melalui \textit{success rate} dan \textit{fail tasks}) dan efisiensi (melalui \textit{time cost}, \textit{mean task step}, dan \textit{mean nav step}) pada skenario navigasi-tugas multi-objek.
+
+\vspace{0.5em}
+
+\subsection{Metrik \textit{Code-Switching} Indonesia--Inggris}
+\label{subsec:cs_metrics}
+
+Pada implementasi evaluasi, seluruh metrik \textit{code-switching} dihitung
+berdasarkan penandaan bahasa (\textit{language identification}, LID) pada level token
+untuk setiap ujaran. Setiap token diberi salah satu label:
+bahasa Indonesia (ID), bahasa Inggris (EN), atau tidak diketahui (UNK),
+dengan mengombinasikan kamus kata dan model LID berbasis \textit{langid}
+yang dibatasi pada pasangan bahasa Indonesia--Inggris
+\parencite{kargaran2024masklid,dhawan2023unified,SrivastavaSingh2021CALCS}.
+Tokenisasi menggunakan token berbasis kata (huruf alfabet), dan seluruh token
+dinormalisasi (misal \textit{lowercasing}) sebelum proses LID.
+Dalam seluruh metrik berikut, hanya token berlabel ID atau EN yang digunakan;
+token UNK dikeluarkan dari urutan, sehingga perhitungan dilakukan pada subsekuens ID/EN.
+Akibatnya, dua token ID/EN yang semula dipisahkan oleh UNK dapat menjadi bersebelahan
+dalam urutan terfilter dan berkontribusi pada perhitungan \textit{switch} maupun \textit{span}.
+
+Misalkan korpus terdiri atas $U$ ujaran.
+Untuk ujaran ke-$u$ dengan $u \in \{1,\dots,U\}$, setelah membuang token UNK,
+diperoleh urutan label bahasa yang dinotasikan sebagai
+$\mathbf{z}^{(u)}$ $= \big(z^{(u)}_1, z^{(u)}_2, \dots, z^{(u)}_{n_u}\big)$
+dengan $z^{(u)}_i \in \{\mathrm{ID}, \mathrm{EN}\}$ dan $n_u$ menyatakan panjang urutan terfilter.
+Jumlah token per bahasa pada ujaran $u$ masing-masing dinotasikan
+$c^{(u)}_{\mathrm{ID}}$ dan $c^{(u)}_{\mathrm{EN}}$.
+
+Pada tingkat korpus, untuk metrik berbasis distribusi bahasa, digunakan total hitungan token 
+yang dinyatakan sebagai~\eqref{eq:corpus_counts}:
+\begin{equation}
+c_{\mathrm{ID}}=\sum_{u=1}^{U} c^{(u)}_{\mathrm{ID}},
+\qquad
+c_{\mathrm{EN}}=\sum_{u=1}^{U} c^{(u)}_{\mathrm{EN}}.
+\label{eq:corpus_counts}
+\end{equation}
+Untuk metrik berbasis transisi dan struktur lokal (misal \textit{switch} dan \textit{span}),
+nilai dihitung pada setiap ujaran $\mathbf{z}^{(u)}$ lalu diringkas (misal rata-rata),
+dan transisi tidak dihitung melintasi batas ujaran.
+
+\vspace{0.5em}
+
+\subsubsection{\textit{M-index} dan \textit{I-index}}
+Misalkan pada suatu deret token terdapat $c_{\mathrm{EN}}$ token bahasa Inggris dan
+$c_{\mathrm{ID}}$ token bahasa Indonesia. Probabilitas empirik tiap bahasa didefinisikan sebagai~\eqref{eq:lang-prob}:
+\begin{equation}
+p_{\mathrm{EN}}
+= \frac{c_{\mathrm{EN}}}{c_{\mathrm{EN}} + c_{\mathrm{ID}}},\qquad
+p_{\mathrm{ID}}
+= \frac{c_{\mathrm{ID}}}{c_{\mathrm{EN}} + c_{\mathrm{ID}}}.
+\label{eq:lang-prob}
+\end{equation}
+Berdasarkan Persamaan~\ref{eq:lang-prob}, M-index untuk dua bahasa didefinisikan sebagai~\eqref{eq:Mnorm}:
+\begin{equation}
+M
+= \frac{1 - (p_{\mathrm{EN}}^2 + p_{\mathrm{ID}}^2)}
+       {p_{\mathrm{EN}}^2 + p_{\mathrm{ID}}^2}.
+\label{eq:Mnorm}
+\end{equation}
+Nilai $M$ meningkat ketika distribusi bahasa semakin seimbang dan menurun ketika satu bahasa
+mendominasi \parencite{SrivastavaSingh2021CALCS}.
+Dalam evaluasi, $M$ dihitung pada tingkat korpus menggunakan $c_{\mathrm{ID}}$ dan $c_{\mathrm{EN}}$
+pada Persamaan~\ref{eq:corpus_counts}.
+
+Untuk I-index, pada ujaran $u$ dengan urutan label $\mathbf{z}^{(u)}$,
+I-index mengukur proporsi perpindahan bahasa antar token berurutan yang
+dinyatakan pada Persamaan~\ref{eq:Inorm}:
+\begin{equation}
+I^{(u)}
+= \frac{\#\{\,i \mid 2 \le i \le n_u,\ z^{(u)}_i \neq z^{(u)}_{i-1}\,\}}
+       {n_u - 1},
+\qquad \text{untuk } n_u \ge 2.
+\label{eq:Inorm}
+\end{equation}
+Definisikan himpunan ujaran valid untuk I-index sebagai
+$\mathcal{U}_I = \{\,u \in \{1,\dots,U\} \mid n_u \ge 2\,\}$.
+Evaluasi melaporkan (i) rata-rata I-index per-ujaran yang dinyatakan sebagai~\eqref{eq:MeanI}:
+\begin{equation}
+\mathrm{MeanI}
+=
+\frac{1}{|\mathcal{U}_I|}
+\sum_{u \in \mathcal{U}_I} I^{(u)},
+\label{eq:MeanI}
+\end{equation}
+serta (ii) versi berbobot tanpa melintasi batas ujaran yang dinyatakan sebagai~\eqref{eq:Iweighted}:
+\begin{equation}
+\mathrm{I\text{-}weighted}
+=
+\frac{\sum_{u \in \mathcal{U}_I}\#\{\,i \mid 2 \le i \le n_u,\ z^{(u)}_i \neq z^{(u)}_{i-1}\,\}}
+     {\sum_{u \in \mathcal{U}_I}(n_u - 1)}.
+\label{eq:Iweighted}
+\end{equation}
+
+\vspace{0.5em}
+
+\subsubsection{\textit{Burstiness} dan \textit{Memory}}
+Dari urutan label $\mathbf{z}^{(u)}$ pada setiap ujaran, dibentuk deret \textit{span}
+monolingual, yaitu segmen token berturut-turut dengan label bahasa yang sama.
+Misalkan panjang span ke-$k$ pada ujaran $u$ adalah $r^{(u)}_k$, sehingga deret panjang span
+ditulis $\mathbf{r}^{(u)}=(r^{(u)}_1,r^{(u)}_2,\dots,r^{(u)}_{m_u})$,
+dengan $m_u$ adalah jumlah span pada ujaran $u$.
+
+\textit{Burstiness} dan \textit{Memory} pada ujaran $u$ didefinisikan sebagai~\eqref{eq:burst-memory}:
+\begin{equation}
+\mathrm{Burstiness}^{(u)}
+= \frac{\sigma_{\mathbf{r}^{(u)}}-\mu_{\mathbf{r}^{(u)}}}{\sigma_{\mathbf{r}^{(u)}}+\mu_{\mathbf{r}^{(u)}}},
+\qquad
+\mathrm{Memory}^{(u)}
+= \mathrm{corr}\!\left(\{(r^{(u)}_k, r^{(u)}_{k+1})\}_{k=1}^{m_u-1}\right),
+\label{eq:burst-memory}
+\end{equation}
+dengan $\mu_{\mathbf{r}^{(u)}}$ dan $\sigma_{\mathbf{r}^{(u)}}$ masing-masing adalah rata-rata
+dan simpangan baku panjang span, serta $\mathrm{corr}(\cdot)$ adalah korelasi Pearson
+yang dihitung atas pasangan berurutan $(r^{(u)}_k, r^{(u)}_{k+1})$ untuk $k=1,\dots,m_u-1$.
+Jika $m_u < 2$, maka $\mathrm{Memory}^{(u)}$ tidak terdefinisi; jika $\mu_{\mathbf{r}^{(u)}}+\sigma_{\mathbf{r}^{(u)}}=0$
+atau $m_u=0$, maka $\mathrm{Burstiness}^{(u)}$ tidak terdefinisi. Dalam kasus tersebut,
+nilai metrik pada ujaran tersebut dikecualikan dari peringkasan.
+
+Definisikan $\mathcal{U}_B$ sebagai himpunan ujaran yang memiliki Burstiness terdefinisi dan
+$\mathcal{U}_M$ sebagai himpunan ujaran yang memiliki Memory terdefinisi.
+Evaluasi melaporkan rata-rata per-ujaran yang dinyatakan sebagai~\eqref{eq:mean_burst_memory}:
+\begin{equation}
+\begin{aligned}
+\mathrm{MeanBurstiness}
+&=
+\frac{1}{|\mathcal{U}_B|}
+\sum_{u \in \mathcal{U}_B} \mathrm{Burstiness}^{(u)},\\
+\mathrm{MeanMemory}
+&=
+\frac{1}{|\mathcal{U}_M|}
+\sum_{u \in \mathcal{U}_M} \mathrm{Memory}^{(u)}.
+\end{aligned}
+\label{eq:mean_burst_memory}
+\end{equation}
+
+\vspace{0.5em}
+
+\subsubsection{\textit{Code-Mixing Index} (CMI)}
+Code-Mixing Index (CMI) mengukur tingkat pencampuran bahasa dengan mempertimbangkan
+proporsi bahasa dominan \parencite{SrivastavaSingh2021CALCS}.
+Untuk suatu deret token dengan $c_{\mathrm{EN}}$ dan $c_{\mathrm{ID}}$,
+CMI didefinisikan sebagai~\eqref{eq:CMI}:
+\begin{equation}
+\mathrm{CMI}
+= 100 \times
+\frac{(c_{\mathrm{EN}} + c_{\mathrm{ID}}) - \max\!\left(c_{\mathrm{EN}},c_{\mathrm{ID}}\right)}
+{c_{\mathrm{EN}} + c_{\mathrm{ID}}}.
+\label{eq:CMI}
+\end{equation}
+Evaluasi melaporkan tiga ringkasan:
+(i) CMI tingkat korpus (menggunakan $c_{\mathrm{EN}},c_{\mathrm{ID}}$ global pada
+Persamaan~\ref{eq:corpus_counts}, seolah seluruh token adalah satu ujaran),
+(ii) rata-rata CMI pada semua ujaran yang memiliki setidaknya satu token ID atau EN,
+dan (iii) rata-rata CMI pada ujaran yang benar-benar bercampur bahasa (CMI $> 0$).
+
+\vspace{0.5em}
+
+\subsubsection{\textit{Language Entropy} (LE) dan \textit{Span Entropy} (SE)}
+Language Entropy (LE) mengukur keragaman distribusi bahasa berdasarkan proporsi token per bahasa.
+Dengan probabilitas $p_j$ pada Persamaan~\ref{eq:lang-prob}, LE didefinisikan sebagai~\eqref{eq:LE}:
+\begin{equation}
+\mathrm{LE}
+= -\sum_{j\in\{\mathrm{ID},\mathrm{EN}\}} p_j \log_2 p_j.
+\label{eq:LE}
+\end{equation}
+Dalam evaluasi, LE dihitung pada tingkat korpus menggunakan distribusi token global
+pada Persamaan~\ref{eq:corpus_counts}.
+
+Span Entropy (SE) mengukur keragaman panjang span monolingual pada level ujaran.
+Untuk ujaran $u$, definisikan fungsi massa peluang panjang span $p^{(u)}(\ell)$ sebagai
+proporsi span dalam $\mathbf{r}^{(u)}$ yang memiliki panjang $\ell$ didefinisikan sebagai~\eqref{eq:span_pmf}:
+\begin{equation}
+p^{(u)}(\ell)
+=
+\frac{\#\{\,k \mid 1 \le k \le m_u,\ r^{(u)}_k = \ell\,\}}
+     {m_u},
+\qquad \text{untuk } m_u \ge 1.
+\label{eq:span_pmf}
+\end{equation}
+Dengan demikian, SE untuk ujaran $u$ didefinisikan sebagai~\eqref{eq:SE}:
+\begin{equation}
+\mathrm{SE}^{(u)}
+= -\sum_{\ell:\,p^{(u)}(\ell)>0} p^{(u)}(\ell)\log_2 p^{(u)}(\ell).
+\label{eq:SE}
+\end{equation}
+Nilai SE tinggi menunjukkan distribusi panjang span yang lebih beragam, sedangkan SE rendah
+menunjukkan panjang span cenderung seragam \parencite{SrivastavaSingh2021CALCS}.
+Jika $m_u=0$ (tidak ada token ID/EN), maka $\mathrm{SE}^{(u)}$ tidak terdefinisi dan dikecualikan dari peringkasan.
+Definisikan $\mathcal{U}_{SE}=\{\,u \in \{1,\dots,U\} \mid m_u \ge 1\,\}$, dan evaluasi melaporkan~\eqref{eq:mean_se}:
+\begin{equation}
+\mathrm{MeanSE}
+=
+\frac{1}{|\mathcal{U}_{SE}|}
+\sum_{u \in \mathcal{U}_{SE}} \mathrm{SE}^{(u)}.
+\label{eq:mean_se}
+\end{equation}
+
+\vspace{0.5em}
+
+\subsubsection{\textit{T-Index}}
+T-Index bertujuan mengukur sejauh mana pilihan \textit{code-switch} suatu kata konsisten
+dengan preferensi sistem penerjemah mesin (MT) \parencite{Chi2024TIndex}.
+Untuk setiap ujaran $u$, definisikan himpunan indeks titik \textit{switch} yang dinyatakan sebagai~\eqref{eq:switch-set}:
+\begin{equation}
+S^{(u)} =
+\{\, i \mid 2 \le i \le n_u,\ z^{(u)}_i \neq z^{(u)}_{i-1} \,\}.
+\label{eq:switch-set}
+\end{equation}
+Untuk setiap $i \in S^{(u)}$, ambil token (kata) $w^{(u)}_i$ pada posisi $i$,
+label bahasa saat ini $z^{(u)}_i$, dan label bahasa sebelumnya $z^{(u)}_{i-1}$.
+Kata $w^{(u)}_i$ dianggap sebagai masukan bahasa sumber $z^{(u)}_i$ dan diterjemahkan
+ke bahasa target $z^{(u)}_{i-1}$ menggunakan model MarianMT bilingual sesuai arah
+(ID$\rightarrow$EN atau EN$\rightarrow$ID).
+Misalkan $y^{(u)}_i = (y_{i,1},\dots,y_{i,|y^{(u)}_i|})$ adalah deret token keluaran teratas.
+Model MT menyediakan probabilitas bersyarat per token
+$P_{\mathrm{MT}}(y_{i,t} \mid y_{i,<t}, w^{(u)}_i)$.
+Dalam metrik ini, $\log(\cdot)$ menyatakan logaritma natural.
+Skor MT untuk titik \textit{switch} didefinisikan sebagai rata-rata log-probabilitas token yang dihasilkan sebagaimana pada Persamaan~\ref{eq:tindex-score}:
+\begin{equation}
+\mathrm{score}_{\mathrm{MT}}\!\left(w^{(u)}_i, z^{(u)}_i \rightarrow z^{(u)}_{i-1}\right)
+= \frac{1}{|y^{(u)}_i|}
+  \sum_{t=1}^{|y^{(u)}_i|}
+  \log P_{\mathrm{MT}}\!\left(y_{i,t} \mid y_{i,<t}, w^{(u)}_i\right).
+\label{eq:tindex-score}
+\end{equation}
+T-Index tingkat korpus didefinisikan sebagai rata-rata skor MT pada seluruh titik switch yang valid:
+\begin{equation}
+\mathrm{TIndex}
+= \frac{1}{|S'|}
+  \sum_{(u,i) \in S'}
+  \mathrm{score}_{\mathrm{MT}}\!\left(w^{(u)}_i, z^{(u)}_i \rightarrow z^{(u)}_{i-1}\right),
+\label{eq:TIndex}
+\end{equation}
+dengan $S' \subseteq \bigcup_{u=1}^{U} \{(u,i): i \in S^{(u)}\}$ adalah himpunan titik switch yang
+berhasil dihitung skornya (misalnya, kasus ketika MT gagal atau skor tidak terdefinisi diabaikan).
+Normalisasi terhadap panjang keluaran $|y^{(u)}_i|$ mengakomodasi efek panjang terjemahan secara implisit.
+Nilai T-Index yang lebih tinggi mengindikasikan bahwa pilihan \textit{code-switch} pada titik-titik tersebut
+lebih selaras dengan preferensi sistem MT dalam memetakan kata ke bahasa yang berseberangan.
+\vspace{0.5em}
+
+\section{Penelitian Terdahulu}
+Pada beberapa tahun terakhir, penelitian VLN bergerak ke dua sumbu utama. Sumbu pertama berfokus pada \textit{long-horizon} \textit{embodied} AI yang memperpanjang urutan tindakan dan penalaran lintas sub-tugas, didorong oleh platform serta \textit{benchmark} baru dan integrasi LLM. \textit{Benchmark} dan platform \textit{embodied} seperti Habitat, VLN-CE, dan HM3D mendorong skenario yang lebih realistis dan berkelanjutan \parencite{savva2019habitat,wijmans2020vlnce,HM3D2021}, sedangkan kerangka \textit{long-horizon} terbaru menegaskan kebutuhan perencanaan berjenjang dan penguraian sub-tugas \parencite{Song2025}. Sumbu kedua menekankan perluasan kemampuan bahasa dari monolingual ke multilingual, dengan dataset seperti RxR yang menegaskan peran keragaman bahasa dalam VLN \parencite{ku2020rxr}.
+
+Secara paralel, LLM dimanfaatkan untuk menghasilkan instruksi sintetis dan meningkatkan kemampuan penalaran agen, selaras dengan praktik \textit{self-instruction} dan kemajuan model fondasi \parencite{wang2023selfinstruct}. Dalam ranah \textit{code-switching}, kemajuan pada TTS dan ASR, termasuk untuk pasangan Indonesia–Inggris, menunjukkan kesiapan ekosistem data dan teknik untuk membangun instruksi \textit{code-switching} yang natural \parencite{Handoyo2024,dhawan2023unified}. Meski banyak kemajuan, masih terdapat celah berupa ketiadaan dataset VLN \textit{long-horizon} dengan instruksi \textit{code-switching} Indonesia–Inggris yang dibangkitkan secara sistematis oleh LLM, yang menjadi kontribusi utama penelitian ini \parencite{gu2022vision,Zhang2024}. Untuk rangkuman penelitian terkait dan posisi kontribusi, lihat Tabel~\ref{tab:rlwork}.
+
+\begin{sidewaystable}[t]
+\centering
+\caption{Ringkasan Penelitian Terkait}
+\label{tab:rlwork}
+{\fontsize{10pt}{12pt}\selectfont
+\setlength{\tabcolsep}{4pt}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\begin{tabularx}{\textwidth}{|p{3.2cm}|p{3.2cm}|p{3.0cm}|p{3.0cm}|p{2.0cm}|Y|}
+\hline
+\textbf{Karya (Tahun)} & \textbf{Fokus/Tugas} & \textbf{Dataset/Platform} & \textbf{Peran LLM} & \textbf{Bahasa} & \textbf{Catatan Relevansi} \\
+\hline
+R2R (2018) \parencite{anderson2018r2r} & VLN instruksi natural (dasar) & Matterport3D / R2R & — (dataset) & EN & Titik awal VLN; jalur pendek berbasis instruksi. \\
+\hline
+RxR (2020) \parencite{ku2020rxr} & VLN multibahasa \& alignment kata–waktu & Matterport3D / RxR & — (dataset) & Multi & Menegaskan pentingnya dukungan multilingual. \\
+\hline
+Habitat (2019) \parencite{savva2019habitat} & Platform simulasi \textit{embodied} AI & Habitat & — (platform) & — & Infrastruktur simulasi berkecepatan tinggi. \\
+\hline
+VLN-CE (2020) \parencite{wijmans2020vlnce} & VLN di lingkungan kontinu & VLN-CE & — (benchmark) & EN & Lebih realistis; pergerakan kontinu. \\
+\hline
+HM3D (2021) \parencite{HM3D2021} & Dunia 3D skala besar untuk \textit{embodied} & HM3D & — (dataset) & — & Variasi struktur/tekstur, untuk generalisasi. \\
+\hline
+Touchdown (2019) \parencite{chen2019touchdown} & Navigasi bahasa di peta jalan & Street View & — (dataset) & EN & Instruksi panjang di lingkungan kota. \\
+\hline
+CVDN (2020) \parencite{thomason2020cvdn} & VLN dengan dialog interaktif & CVDN & — (dataset) & EN & Menambah dimensi dialog pada VLN. \\
+\hline
+REVERIE (2020) \parencite{qi2020reverie} & \textit{Remote object grounding} + nav & REVERIE & — (dataset) & EN & Memadukan grounding objek dengan navigasi. \\
+\hline
+Long-Horizon VLN (2025) \parencite{Song2025} & \textit{Long-horizon} multi-tahap & (platform/benchmark LH-VLN) & Pemanfaatan LLM untuk perencanaan & EN & Menekankan decomposisi sub-tugas dan evaluasi jangka panjang. \\
+\hline
+Self-Instruct (2023) \parencite{wang2023selfinstruct} & Pembangkitan instruksi sintetis & — & LLM sebagai \textit{instructor} & — & Prinsip pembuatan instruksi sintetis untuk skala data. \\
+\hline
+GPT-4 Report (2023) \parencite{OpenAI2023} & Model fondasi multimodal & — & Kapabilitas penalaran/komposisi & — & Landasan integrasi LLM pada agen VLN. \\
+\hline
+TTS ID–EN (2024) \parencite{Handoyo2024} & Sintesis ujaran \textit{code-switching} & STEN-TTS & LID-BERT + TTS multibahasa & ID/EN & Mendukung naturalitas instruksi \textit{code-switching}. \\
+\hline
+ASR CS (2023) \parencite{dhawan2023unified} & Pengenalan ujaran \textit{code-switching} & Beragam korpus CS & Arsitektur terpadu (ASR+LID) & Multi & Indikasi kematangan teknik CS untuk pipeline bahasa. \\
+\hline
+\end{tabularx}
+}
+\end{sidewaystable}

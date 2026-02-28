@@ -1,0 +1,5 @@
+ALT TEXT:
+Grouped bars comparing ISR, CSR, and CGT for Reactive, Hierarchical, and LLM-Planner. Error bars indicate standard deviation across 10 long episodes.
+
+CAPTION:
+ISR, CSR, and CGT comparison across three synthetic approaches.

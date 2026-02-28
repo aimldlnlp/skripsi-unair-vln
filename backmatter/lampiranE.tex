@@ -1,0 +1,367 @@
+\chapter{Lampiran 5: Poisson.h dan Poisson.cpp}
+\section*{poisson.h}
+\scriptsize
+\begin{verbatim}
+#ifndef POISSON_H
+#define POISSON_H
+
+void poisson(std::vector<double> r, std::vector<int> S, std::vector<std::vector<int> > R,std::vector<double> G2);
+
+void pois_dplot(std::vector<std::vector<double> > M,int b, int k, int ii,std::string q);
+
+//c-%pois_fftw3() paket untuk menghitung nilai transformasi forier
+fftw_complex *pois_fftw3(fftw_complex *dat,std::vector<int> N, int s);
+
+//c-%cJ() Paket untuk menghitung hasil transformasi dibagi dengan Total matrix
+fftw_complex *pois_cJ(std::vector<double> n,std::vector<int> S);
+
+//c-%O() menghitung nilai transformasi/total matrix di kali dengan determinan matriks R.
+fftw_complex *pois_O(fftw_complex *n,std::vector<int>S,std::vector<std::vector<int> > R);
+
+//c-%pois_Linv()
+fftw_complex *pois_Linv(fftw_complex *n,std::vector<std::vector<int> > R,std::vector<double> g2);
+
+//c-pois_cI()
+std::vector<double> pois_cI(fftw_complex *n,std::vector<int> S);
+
+//c-%pois_real_kali() adalah mengalikan nilai dua imaginer dengan hasil real.
+double pois_real_kali(fftw_complex *n,fftw_complex *m,int batas);
+#endif
+\end{verbatim}
+\normalsize
+\section*{poisson.cpp}
+\scriptsize
+\begin{verbatim}
+ /*
+==============================================================================================================
+Nama package:
+Fungsi Package:
+Pembuat :
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+*/
+
+#include "edft.h"
+#include "setup.h"
+#include "opmat.h"
+#include "package.h"
+#include "out.h"
+#include "poisson.h"
+
+void poisson(std::vector<double> r, std::vector<int> S, std::vector<std::vector<int> > R, std::vector<double> G2)
+{
+ std::cout<<"menghitung poisson \n";
+ //c-ps=prod(s)
+ int ps=pac_prod(S);
+// std::cout<<ps; 
+ 
+ //c-one:membuat matriks satu. //o-ones(prod(S),1)
+ std::vector<double> one; 
+ one=opmat_ones(ps,1);// out_dm(one,one.size(),1);
+// std::vector<double> onev;
+// onev=opmat_mtv(one,one.size(),1);
+// out_dv(onev);
+
+ //o-sum(R,2)'
+ std::vector<double> sR;
+ sR=opmat_vkali_titik(opmat_sumd(opmat_intodoub(R,3,3),3,3),0.5); //c-sR, sum R
+// out_dv(sR); 
+
+ //c-A adalah versi vektor dari perkalian sR*onev. 
+ //o- ones(prod(S),1)*sum(R,2)' 
+ std::vector<double> A(ps*3);
+ cblas_dger(CblasRowMajor,ps,sR.size(),1.0,&one[0],1,&sR[0],1,&A[0],3);
+ std::vector<std::vector<double> >mA;
+// out_dv(A); 
+ mA=opmat_vtm(A,ps,3);
+// out_dm(mA,ps,3);
+ 
+ //c-rminA= r dikurang A
+ //o-r-(ones....)
+ std::vector<std::vector<double> > rminA;
+ rminA=opmat_mmin(opmat_vtm(r,ps,3),mA,ps,3);
+// out_dm(rminA,ps,3);
+ 
+ //c-rminA2 matriks rminA di kuadratkan
+ //o-().^2
+ std::vector<std::vector<double> > rminA2;
+ rminA2=opmat_vtm(opmat_vkuadrat(opmat_mtv(rminA,ps,3)),ps,3);
+// out_dm(rminA2,ps,3);
+
+ //c-eminA2s vektor dari matriks rminA2
+ //o-sum(,2)
+ std::vector<double> rminA2s;
+ rminA2s=opmat_sumd(rminA2,ps,3);
+// out_dv(rminA2s);
+
+ //c- nilai jarak dr.
+ //o-dr=sqrt(...)...
+ std::vector<double> dr(ps);
+ dr=opmat_sqrt(rminA2s); //c-menghitung jarak dr ke titik pusat
+// out_dv(dr);
+
+ //c-deklarasi nilai sigma.
+ double sigma1,sigma2;
+ sigma1=0.75; sigma2=0.50;
+ 
+ //c-menghitung -dr.^2
+ std::vector<double> mindr2(ps);
+ mindr2=opmat_vkali_titik(opmat_vkuadrat(dr),-1.);
+//out_dv(mindr2);
+
+ //c-matrix atas1, atas2. bagian atas dari g1
+ double pengali1,pengali2;
+ std::vector<double> atas1(ps),atas2(ps);
+ pengali1=1/(2*sigma1*sigma1); //std::cout<<pengali1<<"\n"; 
+ pengali2=1/(2*sigma2*sigma2);// std::cout<<pengali2<<"\n";
+ atas1=opmat_vexp(opmat_vkali_titik(mindr2,pengali1)); // out_dv(atas1);
+ atas2=opmat_vexp(opmat_vkali_titik(mindr2,pengali2)); // out_dv(atas2);
+
+ //c-elemen bawah pengali.
+ double bawah1,bawah2;
+ bawah1=pow(sqrt(2*PI*sigma1*sigma1),3); //std::cout<<bawah1<<"\n";
+ bawah2=pow(sqrt(2*PI*sigma2*sigma2),3); //std::cout<<bawah2<<"\n";
+ 
+ //c-g1 dan g2: menghitung nilai normalisasi gaussian (0.5 dan 0.75)
+ std::vector<double> g1(ps),g2(ps);
+ g1=opmat_vkali_titik(atas1,1/bawah1); //out_dv(g1);
+ g2=opmat_vkali_titik(atas2,1/bawah2); //out_dv(g2);
+
+ //c-membuat nilai n //o-n=g2-g1; //c-mendefinisikan rapat muatan.
+ std::vector<double> n;
+ n=opmat_vmin(g2,g1); //out_dv(n);
+ 
+ //c-menghitung norm dan integral harus mendekati 1 dan 0.
+ double normg1,normg2,detR,tcharge;
+ detR=opmat_det3(opmat_intodoub(R,3,3));
+ normg1=opmat_sum(g1)*detR/ps;
+ normg2=opmat_sum(g2)*detR/ps;
+ tcharge=opmat_sum(n)*detR/ps;
+ std::cout<<"Check nilai normalisasi g1 = "<<normg1<<"\n";
+ std::cout<<"Check nilai normalisasi g2 = "<<normg2<<"\n";
+ std::cout<<"Cek muatan total : "<<tcharge<<"\n";
+
+ //c-plot data yang sudah di normalisasi dengan gaussian
+ std::vector<std::vector<double> >sl; //c-%sl adalah slice yang akan di plot
+ std::string q="gaussian_";
+ for (int i=0;i<3;i++)
+   {
+    int b,k;
+    sl=set_slice(n,S,S[i]/2-1,i+1,&b,&k); 
+   // out_dm(sl,b,k);
+    pois_dplot(sl,b,k,i,q);
+    sl.clear();
+   }
+
+ //c-mengeluarkan nilai setelah di transform
+ std::vector<double> phi(ps);
+// fourier=pois_fftw3(n,S,1); //out_dv(fourier);
+
+ //c-%phi adalah nilai solusi dari poisson.
+ phi=pois_cI(pois_Linv(pois_O(pois_cJ(n,S),S,R),R,G2),S); 
+// out_dv(phi);
+
+ //c-plot data yang dihasilkan dari solusi poisson
+ std::vector<std::vector<double> > plotphi; //c-%plotphi adalah nilai phi yang dipersiapkan untuk diplot
+ q="phi_";
+ for (int i=0;i<3;i++)
+   {
+    int b,k;
+    plotphi=set_slice(phi,S,S[i]/2-1,i+1,&b,&k); 
+   // out_dm(sl,b,k);
+    pois_dplot(plotphi,b,k,i,q);
+    plotphi.clear();
+   }
+   
+//c- Check energi total Coulomb
+double Unum,Uanal; //c-%unum adalah energi total coulomb numerik, Uanal=analitik
+Unum=0.5*pois_real_kali(pois_cJ(phi,S),pois_O(pois_cJ(n,S),S,R),ps);
+std::cout<<"Nilai energi total Coulomb numerik = "<<Unum<<"\n";
+Uanal=((1/sigma1+1/sigma2)/2-sqrt(2)/sqrt(sigma1*sigma1+sigma2*sigma2))/sqrt(PI);
+std::cout<<"Nilai energi total Coulomb analitik = "<<Uanal<<"\n";
+
+
+
+ //c- menghapus sampah....
+ r.clear(); S.clear(); R.clear(); one.clear(); sR.clear(); A.clear(); mA.clear(); rminA.clear(); rminA2.clear(); dr.clear(); mindr2.clear(); atas1.clear(); atas2.clear(); g1.clear(); g2.clear(); n.clear(); sl.clear(); phi.clear(); plotphi.clear();
+}
+
+//=====================================================================
+//c- %pois_dplot untuk membuat data plot poisson.
+void pois_dplot(std::vector<std::vector<double> > M,int b, int k, int ii,std::string q)
+{
+ std::vector<double> v1(b*k), v2(b*k), v3(b*k);
+ std::vector<std::vector<double> > hasil,plot;
+ for(int i=0;i<b;i++)
+       {
+        for(int j=0;j<k;j++)
+          {
+           v1[i*k+j]=i*1.0;
+           v2[i*k+j]=j*1.0;
+           v3[i*k+j]=M[i][j];
+          }
+       } 
+  hasil.push_back(v1);
+  hasil.push_back(v2);
+  hasil.push_back(v3);
+  
+  plot=opmat_transpose_double(hasil,3,b*k);
+//  std::string q="gaussian_";
+  fout_dm(plot,q,ii,b*k,3);
+ 
+  M.clear(); v1.clear(); v2.clear(); v3.clear(); hasil.clear(); plot.clear();
+}
+
+//=====================================================================
+//c-%pois_fftw3() paket untuk menghitung nilai transformasi forier
+fftw_complex *pois_fftw3(fftw_complex* dat,std::vector<int> N, int s)
+{
+  int x,y,z;
+  x=N[0]; y=N[1]; z=N[2];
+  int batas=x*y*z;
+ 
+  //c-mendefinisikan nilai input output.
+  fftw_complex *in, *out;
+  fftw_plan my_plan;
+  in=(fftw_complex*) fftw_malloc(sizeof(fftw_complex)*batas);
+  out=(fftw_complex*) fftw_malloc(sizeof(fftw_complex)*batas);
+
+  if (s==1)
+   {
+   // std::cout<<"belum didefinisikan";
+     my_plan=fftw_plan_dft_3d(z,y,x,dat,out,FFTW_BACKWARD,FFTW_ESTIMATE);
+      fftw_execute(my_plan);
+   }
+
+  else
+   {
+     my_plan=fftw_plan_dft_3d(z,y,x,dat,out,FFTW_FORWARD,FFTW_ESTIMATE); 
+      fftw_execute(my_plan);
+    }
+  return out;
+
+ //c- Bersih bersih
+ fftw_destroy_plan(my_plan); fftw_free(in); fftw_free(out); fftw_free(dat); N.clear();
+}
+
+//=====================================================================
+//c-%pois_cJ() Paket untuk menghitung hasil transformasi dibagi dengan Total matrix
+//o-%cJ(in)
+fftw_complex *pois_cJ(std::vector<double> n,std::vector<int> S)
+{
+ int batas=S[0]*S[1]*S[2]; 
+ fftw_complex *hasil,*sementara,*bagi,*in;
+
+ hasil=(fftw_complex*) fftw_malloc(sizeof(fftw_complex)*batas);
+ sementara=(fftw_complex*) fftw_malloc(sizeof(fftw_complex)*batas);
+ in=(fftw_complex*) fftw_malloc(sizeof(fftw_complex)*batas);
+ bagi=(fftw_complex*) fftw_malloc(sizeof(fftw_complex)*1);
+
+ for(int i=0;i<batas;i++)
+ in[i]=(fftw_complex) n[i];
+  
+ sementara=pois_fftw3(in,S,-1);
+
+ bagi[0]=(fftw_complex) batas;
+ 
+ for(int i=0;i<batas;i++)
+ hasil[i]=sementara[i]/bagi[0];
+
+ return hasil;
+ //c-bersih bersih....
+ fftw_free(hasil); fftw_free(sementara); n.clear();S.clear();
+}
+
+//=====================================================================
+//c-%O() menghitung nilai transformasi/total matrix di kali dengan determinan matriks R.
+fftw_complex *pois_O(fftw_complex *n,std::vector<int>S,std::vector<std::vector<int> > R)
+{
+ int batas=S[0]*S[1]*S[2];
+ double determinan=opmat_det3(opmat_intodoub(R,3,3));
+
+ fftw_complex *hasil,*sementara,*kali;
+
+ hasil=(fftw_complex*) fftw_malloc(sizeof(fftw_complex)*batas);
+ sementara=(fftw_complex*) fftw_malloc(sizeof(fftw_complex)*batas);
+ kali=(fftw_complex*) fftw_malloc(sizeof(fftw_complex)*1); 
+ 
+ kali[0]=(fftw_complex) determinan;
+
+ for(int i=0;i<batas;i++)
+ hasil[i]=n[i]*kali[0];
+
+ return hasil;
+ //c-bersih bersih
+ fftw_free(hasil); fftw_free(sementara); fftw_free(kali); S.clear(); R.clear();
+}
+
+//======================================================================
+//c-pois_Linv()
+fftw_complex *pois_Linv(fftw_complex *n,std::vector<std::vector<int> > R,std::vector<double> g2)
+{
+ int batas=g2.size();
+ double pengali=-4*PI;
+ double det=opmat_det3(opmat_intodoub(R,3,3));
+ std::vector<double> bagi;
+ 
+ bagi=opmat_vkali_titik(g2,-1.*det); 
+
+ fftw_complex *hasil,*sementara,*cbagi,*cpengali;
+
+ cpengali=(fftw_complex*) fftw_malloc(sizeof(fftw_complex)*1);
+ cbagi=(fftw_complex*) fftw_malloc(sizeof(fftw_complex)*batas);
+ hasil=(fftw_complex*) fftw_malloc(sizeof(fftw_complex)*batas);
+ sementara=(fftw_complex*) fftw_malloc(sizeof(fftw_complex)*batas);
+ 
+ cpengali[0]=(fftw_complex) pengali;
+ 
+ for (int i=0;i<batas;i++)
+ cbagi[i]=(fftw_complex) bagi[i];
+
+ for (int i=0;i<batas;i++)
+ hasil[i]=cpengali[0]*n[i]/cbagi[i];
+ hasil[0]=(fftw_complex) 0;
+
+ return hasil;
+ //c-bersih bersih
+ fftw_free(n);fftw_free(cbagi);fftw_free(hasil);fftw_free(sementara);fftw_free(cpengali); bagi.clear(); g2.clear(); R.clear();
+}
+
+//======================================================================
+//c-%pois_cI()
+std::vector<double> pois_cI(fftw_complex *n,std::vector<int> S)
+{
+ int batas=S[0]*S[1]*S[2]; 
+ fftw_complex *sementara,*bagi;
+ std::vector<double> hasil(batas);
+
+ sementara=(fftw_complex*) fftw_malloc(sizeof(fftw_complex)*batas);
+ bagi=(fftw_complex*) fftw_malloc(sizeof(fftw_complex)*1);
+ 
+ sementara=pois_fftw3(n,S,1);
+
+ bagi[0]=(fftw_complex) batas;
+ 
+ for(int i=0;i<batas;i++)
+ hasil[i]=creal(sementara[i]);
+
+ return hasil;
+ //c-bersih bersih....
+ hasil.clear(); fftw_free(sementara); fftw_free(n);S.clear();
+}
+
+//=====================================================================
+//c-%pois_real_kali() adalah mengalikan nilai dua imaginer dengan hasil real.
+double pois_real_kali(fftw_complex *n,fftw_complex *m,int batas)
+{
+ fftw_complex sementara=(fftw_complex) 0;
+ double hasil;
+
+ for(int i=0;i<batas;i++)
+   {
+    sementara+=n[i]*m[i];
+   }
+ hasil=creal(sementara);
+ return hasil;
+}
+\end{verbatim}
+

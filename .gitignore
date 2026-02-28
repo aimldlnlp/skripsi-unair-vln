@@ -1,0 +1,52 @@
+# ====================
+# LaTeX Temporary Files
+# ====================
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.glo
+*.gls
+*.glg
+*.idx
+*.ilg
+*.ind
+*.ist
+*.lof
+*.log
+*.lot
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+*.acn
+*.acr
+*.alg
+
+# PDF output (optional - uncomment jika ingin exclude PDF)
+# *.pdf
+
+# ====================
+# Editor/OS Files
+# ====================
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Backup files
+*.bak
+*.backup
+* copy.*
+*.tmp
+
+# ====================
+# Other
+# ====================
+*.listing
+*.bbl-SAVE-ERROR

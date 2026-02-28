@@ -1,0 +1,5 @@
+ALT TEXT:
+Left: hexbin of target vs achieved English-token ratio with the diagonal y=x for reference. Middle: stacked bars showing inter-/intra-sentential and tag-switching proportions per target bin. Right: LID heatmap (0=ID, 1=EN) by sub-task with overall compliance.
+
+CAPTION:
+Code-switch ratio control, switching patterns, and LID consistency.

@@ -1,0 +1,132 @@
+\chapter{PENDAHULUAN}
+\label{Bab1}
+
+\section{Latar Belakang}
+\textit{Vision-Language Navigation} (VLN) mempelajari bagaimana agen \textit{embodied} mengeksekusi instruksi bahasa untuk menavigasi lingkungan 3D. Kebutuhan aplikasi dunia nyata semakin mengarah pada skenario navigasi \textit{long-horizon}, yaitu ketika tujuan global dicapai melalui rangkaian sub-tugas yang saling bergantung secara spasial maupun temporal \parencite{anderson2018r2r,KrantzVLNCE,Song2025}. Pada skenario ini, agen tidak cukup bersikap reaktif langkah demi langkah; agen perlu menjaga konsistensi rencana lintas langkah, menyusun keterampilan secara komposisional, serta tetap tangguh terhadap kegagalan lokal dan ambiguitas linguistik \parencite{anderson2018r2r,KrantzVLNCE,Song2025}. Dalam penelitian ini, \textit{long-horizon} didefinisikan sebagai tugas navigasi multi-target, yakni agen harus mencapai beberapa target berurutan yang membentuk ketergantungan antar-tahap; definisi ini dibedakan dari sekadar trajektori panjang menuju satu tujuan \parencite{gu2022vision,Zhang2024}. Konsekuensinya, episode dapat mencakup puluhan hingga ratusan langkah diskret dan melintasi beberapa ruangan berbeda, sehingga keputusan awal berpotensi memengaruhi keberhasilan tahap-tahap berikutnya \parencite{gu2022vision,Zhang2024}.
+
+\textit{Dataset} fondasional seperti R2R dan RxR memformalkan VLN berbasis instruksi, namun umumnya bersifat \textit{short-horizon}: episode relatif pendek, struktur sub-tugas tidak dieksplisitkan, dan representasi rencana multi-tahap tidak tersedia secara langsung untuk kebutuhan audit serta analisis kegagalan \parencite{anderson2018r2r,ku2020rxr}. Sejalan dengan itu, penelitian mutakhir menegaskan bahwa kemajuan VLN semakin ditentukan oleh kemampuan mengelola ketergantungan keputusan jangka panjang, bukan hanya memetakan instruksi ke tindakan lokal \parencite{Song2025,KrantzVLNCE}. Dengan kata lain, kebutuhan \textit{long-horizon} menuntut pergeseran fokus dari akurasi langkah menuju konsistensi strategi sepanjang episode \parencite{Song2025,KrantzVLNCE}.
+
+Gambar~\ref{fig:timeline-vln} merangkum pergeseran \textit{frontier benchmark} VLN menuju horizon yang makin panjang: dari tugas \textit{indoor} berbasis \textit{navigation graph} (misalnya R2R dan RxR) \parencite{anderson2018r2r,ku2020rxr}, menuju pengaturan yang lebih realistis seperti \textit{continuous control} (VLN-CE) \parencite{KrantzVLNCE}, hingga tugas multi-stage yang secara eksplisit menargetkan navigasi \textit{long-horizon} (misalnya LHPR-VLN) \parencite{Song2025}. Tren ini mengindikasikan bahwa keberhasilan pada \textit{benchmark} \textit{short-horizon} tidak otomatis tertransfer ke \textit{benchmark} \textit{long-horizon}, karena kegagalan kecil di awal episode dapat memicu \textit{error compounding} dan mengunci agen pada lintasan yang menyimpang \parencite{Song2025}. Seiring bertambahnya panjang rangkaian keputusan, kebutuhan akan \textit{memory} untuk mempertahankan konsistensi instruksi bertahap serta kebutuhan \textit{planning} (sering kali hierarkis) menjadi semakin menonjol \parencite{Song2025,KrantzVLNCE}.
+\begin{figure}[H]
+\centering
+\includegraphics[width=1.0\linewidth]{images/fig1_timeline_vln_paperish_v2.2.png}
+\caption{Timeline Eskalasi \textit{Horizon} Pada \textit{Benchmark Vision-Language Navigation}}
+\label{fig:timeline-vln}
+\end{figure}
+
+Implikasi dari pergeseran tersebut adalah perlunya pembaruan rancangan \textit{dataset} untuk VLN \textit{long-horizon}. Jika episode panjang hanya disimpan sebagai pasangan ``instruksi--trajektori'' dan dinilai dengan keberhasilan global, maka sulit menjawab pertanyaan audit seperti: sub-tugas mana yang gagal, dan bagaimana kegagalan awal memengaruhi tahap berikutnya. Karena itu, lintasan sebaiknya dipresentasikan sebagai rangkaian \textit{waypoint} dan sub-tugas yang eksplisit \parencite{KrantzVLNCE,liu2025visualgrounding,liu2024embodiedai,wang-etal-2024-navigating}. 
+
+Sebagai contoh, instruksi panjang dapat dipetakan ke segmen-segmen seperti ``keluar dari ruang tamu'', ``mencapai koridor'', dan ``berhenti di depan meja''; tiap segmen memiliki target dan rujukan instruksi yang jelas. Representasi terstruktur seperti ini memudahkan evaluasi komposisionalitas, diagnosis \textit{error compounding}, dan penilaian agen pada tingkat sub-tugas \parencite{KrantzVLNCE,liu2025visualgrounding,liu2024embodiedai}. Dengan demikian, tantangan utama tidak hanya mencapai tujuan akhir, tetapi menjaga konsistensi perencanaan global dan kontrol lokal serta keselarasan semantik instruksi--persepsi sepanjang episode \parencite{KrantzVLNCE,liu2025visualgrounding,liu2024embodiedai}.
+
+\textit{Framework Long-Horizon Vision-Language Navigation} (LH-VLN) dan NavGen menyediakan fondasi untuk menyintesis episode panjang yang terstruktur dan dapat diaudit. Secara umum, NavGen memfaktorkan instruksi menjadi rencana lintasan berbutir halus dan menyintesis deskripsi tingkat tinggi dari rangkaian tindakan, sehingga keterkaitan antara representasi rencana dan teks menjadi lebih terlacak. Dalam konteks LH-VLN, \textit{dataset} dapat dirancang sebagai pasangan rencana--instruksi dengan jejak transformasi yang eksplisit, sehingga audit semantik dan spasial sepanjang episode dapat dilakukan lebih sistematis. Fondasi ini relevan bagi penelitian ini karena tujuan utama bukan hanya memperpanjang episode, tetapi juga membuat relasi rencana--instruksi dapat ditinjau ulang hingga tingkat sub-tugas \parencite{Song2025}.
+
+Agar episode navigasi \textit{long-horizon} dapat direalisasikan secara konsisten, dibutuhkan lingkungan simulasi yang fotorealistik, efisien, serta memberi kendali operasional atas pemilihan \textit{scene}, konfigurasi sensor, dan pergerakan agen. Habitat menyediakan simulator yang efisien dan terintegrasi \parencite{savva2019habitat}, sementara \textit{dataset} \textit{Habitat-Matterport} 3D (HM3D) menawarkan ribuan rekonstruksi bangunan dengan keragaman \textit{layout} dan fidelitas visual \parencite{HM3D2021}. Kombinasi Habitat dan HM3D menjadi landasan yang memadai untuk membangkitkan episode LH-VLN yang terstruktur, berjangka panjang, dan dapat diinspeksi ulang \parencite{HM3D2021}. Dengan basis simulasi tersebut, proses sintesis episode dapat dikontrol (misal pemilihan \textit{scene} dan target) tanpa bergantung pada akuisisi data dunia nyata.
+
+Kemajuan \textit{Large Language Models} (LLM) membuka peluang \textit{pipeline} generatif \textit{in-the-loop} yang mengaitkan perencanaan, pembangkitan instruksi, serta pemeriksaan kualitas dalam satu alur \parencite{10.1007/978-3-031-73397-0_3}. Literatur \textit{alignment} dan kurasi instruksi seperti \textit{Reinforcement Learning from Human Feedback} (RLHF) dan \textit{self-instruct} menunjukkan bahwa keluaran model dapat diarahkan menuju gaya dan struktur tertentu, yang relevan untuk menghasilkan instruksi bertahap yang konsisten dengan rencana \parencite{Ouyang2022,wang2023selfinstruct,OpenAI2023}. Pada saat yang sama, kemampuan \textit{instruction following} perlu dipantau agar kepatuhan terhadap batasan lingkungan dan rencana tetap terjaga \parencite{Kuchemann2025,Mienye2025LargeLanguageModels, zhang25llm, li24llmtextgen}. Oleh karena itu, penelitian ini memposisikan LLM \textit{in-the-loop} bukan hanya sebagai pembangkit teks, tetapi juga sebagai komponen yang dapat membantu pemeriksaan konsistensi terbatas (misalnya kesesuaian urutan sub-tugas dan keterkaitan rujukan spasial terhadap rencana), tanpa mengklaim validasi kebenaran yang bersifat menyeluruh \parencite{Zhang2024,OpenAI2023}.
+
+Fokus spesifik penelitian ini adalah pembangkitan instruksi \textit{code-switching} Indonesia--Inggris yang terkontrol untuk navigasi \textit{long-horizon}. Dalam praktik komunikasi di Indonesia, \textit{code-switching} jamak muncul pada konteks pendidikan, media, dan ranah profesional; akibatnya, instruksi navigasi yang realistis dapat memuat pergantian bahasa pada berbagai granularitas dan pola \parencite{adilazuarda-2022-indorobusta,Handoyo2024}. Bagi VLN, fenomena ini penting karena label ruang (misal landmark), relasi spasial (misal \textit{next to}, \textit{across}, \textit{towards}), dan tujuan bertahap dapat diekspresikan dalam dua bahasa secara bergantian. Tanpa kontrol yang eksplisit, variasi pola \textit{code-switching} berpotensi menjadi faktor pengganggu analisis: kegagalan agen dapat berasal dari tantangan persepsi/penalaran ruang, atau semata dari perubahan identitas bahasa yang tidak terukur. Karena itu, penelitian ini menargetkan pengaturan rasio dan pola pergantian bahasa secara sistematis agar pengaruhnya terhadap keterpahaman instruksi dan keterlacakan rencana dapat dipelajari secara lebih terukur.
+
+Sebagai ilustrasi instruksi yang relevan untuk VLN, berikut contoh singkat \textit{code-switching} Indonesia--Inggris yang memisahkan urutan tindakan (Indonesia) dan rujukan spasial/landmark (Inggris):
+``Mulai dari ruang tamu, jalan lurus sampai kamu melihat \textit{stairs}. Setelah itu belok kanan dan menuju \textit{door} yang \textit{next to} rak buku, lalu berhenti di depan meja kecil di koridor.'' Contoh ini menunjukkan bagaimana landmark dan relasi spasial sering muncul dalam bahasa Inggris, sementara struktur langkah dan pengikat urutan dinyatakan dalam bahasa Indonesia.
+
+Literatur \textit{Natural Language Processing} (NLP), \textit{Automatic Speech Recognition} (ASR), dan \textit{Text-to-Speech} (TTS) untuk Indonesia--Inggris juga menegaskan bahwa pengendalian identitas bahasa per token serta modul \textit{Language Identification} (LID) membantu pemodelan ujaran campuran, yang implikasinya langsung pada desain \textit{dataset} teks navigasi \parencite{Tazakka2024,Handoyo2024,DBLP:journals/access/HidayatullahQLA22}. Dengan demikian, instruksi \textit{code-switching} dalam penelitian ini tidak diperlakukan sebagai variasi kebahasaan semata, melainkan sebagai variabel yang dikontrol dan dianotasi untuk kepentingan eksperimen VLN yang replikabel \parencite{HidayatullahPLM2025}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\linewidth]{images/benchmark_cs_ideng/xy_benchmark_map_no_table_readable.pdf}
+\caption{Peta \textit{Landscape Benchmark} \textit{Code-Switching} Indonesia--Inggris}
+\label{fig:peta-codeswitch-ideng}
+\end{figure}
+
+Pada Gambar~\ref{fig:peta-codeswitch-ideng}, ruang benchmark diproyeksikan pada bidang $XY$: sumbu-$X$ (skala log) merepresentasikan \textit{navigation horizon proxy} (rata-rata langkah/\textit{hops}), sedangkan sumbu-$Y$ merepresentasikan intensitas \textit{code-switching} yang dikuantifikasi dengan \textit{Code-Mixing Index (CMI)}~\parencite{gamback-das-2016-comparing}. Titik-titik \textit{benchmarkembodied navigation} (misal R2R~\parencite{anderson2018r2r}, RxR~\parencite{ku2020rxr}, SOON/FAO~\parencite{Zhu_2021_CVPR}, CVDN~\parencite{thomason2020cvdn}, hingga LHPR-VLN~\parencite{Song2025}) terkonsentrasi pada $Y\approx 0$, menandakan bahwa instruksi navigasi pada benchmark utama umumnya monolingual atau tidak memodelkan fenomena \textit{code-switching} secara eksplisit. Pergerakan ke kanan (nilai $X$ makin besar) menunjukkan peningkatan kompleksitas \textit{horizon}, dengan \textit{benchmark long-horizon} (LHPR-VLN~\parencite{Song2025}) berada jauh di sisi kanan namun tetap pada CMI rendah.
+
+Sebaliknya, korpus \textit{text-only} ID--EN yang memang \textit{code-mixed} (ditunjukkan pada inset) memiliki CMI lebih tinggi dan menjadi bukti adanya data \textit{code-switching} yang terukur untuk konteks Indonesia--Inggris~\parencite{barik-etal-2019-normalization,Yulianti2021}, selaras dengan literatur yang menekankan pentingnya pemodelan \textit{code-switching} untuk teknologi bahasa~\parencite{dogruoz-survey} dan isu \textit{robustnes} pada variasi \textit{code-switching} di Indonesia~\parencite{adilazuarda-2022-indorobusta}. Area arsiran ``\textit{Gap focus: long-horizon + code-mixing}'' menandai kekosongan \textit{benchmark}: belum ada \textit{benchmark} VLN yang sekaligus \textit{long-horizon} dan \textit{code-mixed} (ID--EN). Titik target (bintang) mengilustrasikan tujuan penelitian untuk membangkitkan dataset instruksi navigasi horizon panjang dengan fenomena code-switching ID--EN; anotasi ``LLM synthesis'' merepresentasikan strategi menjembatani gap tersebut melalui pembangkitan instruksi/variasi data berbasis LLM, selaras dengan praktik \textit{instruction tuning} dan \textit{self-instruction} pada LLM modern~\parencite{Ouyang2022,wang2023selfinstruct}.
+
+\begin{table}[H]
+\centering
+\caption{Perbandingan \textit{Dataset} Penelitian Ini dengan Beberapa \textit{Benchmark/Dataset} VLN yang Umum Digunakan.}
+\label{tab:gap-dataset}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+
+{\tnrfamily\fontsize{10}{12}\selectfont
+\begin{tabularx}{\linewidth}{@{}l*{3}{>{\centering\arraybackslash}X}@{}}
+\toprule
+\textit{Dataset/Benchmark} & \textit{Long-Horizon} & ID-EN & Audit Sub-Tugas \\
+\midrule
+R2R \parencite{anderson2018r2r}            & \cellcolor{red!15}\xmark & \cellcolor{red!15}\xmark & \cellcolor{red!15}\xmark \\
+RxR \parencite{ku2020rxr}       & \cellcolor{red!15}\xmark & \cellcolor{red!15}\xmark & \cellcolor{red!15}\xmark \\
+Touchdown \parencite{chen2019touchdown}      & \cellcolor{yellow!15}$\sim$ & \cellcolor{red!15}\xmark & \cellcolor{red!15}\xmark \\
+CVDN \parencite{thomason2020cvdn}           & \cellcolor{yellow!15}$\sim$ & \cellcolor{red!15}\xmark & \cellcolor{red!15}\xmark \\
+VLN-CE \parencite{KrantzVLNCE}         & \cellcolor{yellow!15}$\sim$ & \cellcolor{red!15}\xmark & \cellcolor{red!15}\xmark \\
+LHPR-VLN \parencite{Song2025}      & \cellcolor{green!15}\cmark & \cellcolor{red!15}\xmark & \cellcolor{green!15}\cmark \\
+Penelitian Ini & \cellcolor{green!15}\cmark & \cellcolor{green!15}\cmark & \cellcolor{green!15}\cmark \\
+\bottomrule
+\end{tabularx}
+
+\vspace{0.25em}
+\begin{minipage}{\linewidth}
+\footnotesize
+Keterangan: \cmark\ = mendukung; \xmark\ = tidak mendukung; $\sim$ = mendekati aspek terkait secara parsial (misalnya episode lebih panjang karena kontrol kontinu atau dialog), namun tidak sepenuhnya memenuhi definisi \textit{long-horizon} multi-target dan/atau belum menyediakan representasi audit sub-tugas eksplisit sesuai definisi penelitian ini.
+\end{minipage}
+}% end font scope
+\end{table}
+
+Tabel~\ref{tab:gap-dataset} menyoroti kesenjangan pada \textit{dataset} instruksi fondasional dan \textit{benchmark} terkait: (i) keterbatasan cakrawala episode (khususnya untuk definisi multi-target), (ii) ketiadaan instruksi bilingual Indonesia--Inggris, dan (iii) belum adanya representasi yang secara eksplisit mendukung \textit{audit sub-tugas}. Walaupun \textit{benchmark} lain turut memperluas spektrum setting (misal Touchdown dan CVDN) \parencite{chen2019touchdown,thomason2020cvdn} serta memperketat realisme kontrol (misal VLN-CE) \parencite{KrantzVLNCE}, kombinasi tiga aspek tersebut tetap jarang tersedia secara bersamaan. Kondisi ini memotivasi rancangan \textit{dataset} yang mengikat rencana, instruksi, dan metadata secara eksplisit agar analisis menjadi lebih terukur pada tingkat sub-tugas \parencite{Song2025,Zhang2024}.
+
+Ruang lingkup penelitian ini berfokus pada pembangkitan \textit{dataset} navigasi \textit{long-horizon} dengan instruksi \textit{code-switching} Indonesia--Inggris tanpa melakukan pelatihan agen berbasis \textit{reinforcement learning}. Walaupun penelitian \textit{embodied} seperti SayCan dan RT-2 menunjukkan integrasi penalaran bahasa dan tindakan pada robot dunia nyata \parencite{Ahn2022,Brohan2023}, kontribusi yang dituju di sini adalah: (i) skema kontrol bahasa untuk \textit{code-switching}; (ii) \textit{pipeline} generatif LLM \textit{in-the-loop} untuk membangkitkan instruksi bertahap yang konsisten dengan rencana; (iii) keterlacakan rencana--instruksi hingga tingkat sub-tugas; serta (iv) kurasi metadata/mekanisme evaluasi yang relevan untuk audit episode \textit{long-horizon} \parencite{Song2025,Zhang2024}.
+
+Penelitian ini menegaskan urgensi pengembangan \textit{dataset} LH-VLN berbasis LLM \textit{in-the-loop} dengan pola \textit{code-switching} Indonesia--Inggris yang dikontrol secara eksplisit. Berbeda dengan korpus \textit{code-switching} yang memotret ujaran natural, penelitian ini merancang peralihan bahasa melalui \textit{prompting} dan kontrol keluaran (misal rasio dan peran bahasa Indonesia--Inggris), sehingga sifat \textit{code-switching} di dalam \textit{dataset} dapat dianalisis dan dimanipulasi secara sistematis \parencite{mondal-etal-2022-cocoa}. \textit{Dataset} tersebut dikembangkan dalam lingkungan simulasi Habitat dan HM3D \parencite{savva2019habitat,HM3D2021}, serta dilengkapi struktur representasi dan metadata untuk mendukung audit sub-tugas. Dengan demikian, penelitian ini diharapkan menjadi pijakan awal bagi ekosistem riset \textit{embodied} AI dan \textit{multilingual instruction following} di Indonesia.
+
+\vspace{0.5em}
+
+\section{Rumusan Masalah}
+\label{sec:rumusan-masalah}
+
+Rumusan masalah dalam penelitian ini dirumuskan sebagai berikut:
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]    
+    \item Bagaimana merancang dan mengadaptasi \textit{pipeline} generatif bertahap untuk membangkitkan \textit{dataset} \textit{long-horizon vision-language navigation} dengan instruksi \textit{code-switching} Indonesia-Inggris, mulai dari perancangan tugas navigasi multi-target dengan LLM, eksekusi trajektori di simulator Habitat, pemecahan trajektori menjadi segmen yang diberi tag visual secara otomatis, hingga pembangkitan instruksi navigasi natural yang mengikuti urutan langkah tersebut?
+    \item Bagaimana menyusun dan menerapkan kerangka evaluasi untuk menilai kualitas \textit{dataset} \textit{long-horizon vision-language navigation} dengan instruksi \textit{code-switching} Indonesia-Inggris yang dihasilkan, baik dari sisi kinerja navigasi agen maupun dari sisi pola \textit{code-switching} pada instruksi?
+\end{enumerate}
+\vspace{0.5em}
+
+\section{Tujuan Penelitian}
+\label{sec:tujuan-penelitian}
+
+Sejalan dengan rumusan masalah di atas, penelitian ini memiliki tujuan sebagai berikut:
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]    
+    \item Merancang dan mengadaptasi \textit{pipeline} generatif bertahap untuk membangkitkan \textit{dataset} \textit{long-horizon vision-language navigation} dengan instruksi \textit{code-switching} Indonesia-Inggris di lingkungan simulasi Habitat, yang mencakup tahap perancangan tugas navigasi multi-target berbasis LLM, eksekusi trajektori, pemecahan trajektori menjadi segmen bertag visual, serta pembangkitan instruksi navigasi natural.
+    \item Menyusun dan menerapkan kerangka evaluasi untuk menilai kualitas \textit{dataset} yang dihasilkan dengan menggabungkan (1) metrik kinerja navigasi, serta (2) metrik objektif \textit{code-switching} yang merefleksikan distribusi dan intensitas \textit{code-switching} Indonesia-Inggris pada instruksi navigasi.
+\end{enumerate}
+\vspace{0.5em}
+
+\section{Manfaat Penelitian}
+Penelitian ini diharapkan memberikan nilai tambah dari sisi teoretis dan praktis sebagai berikut:
+% \subsection*{1. Manfaat Teoretis}
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item Memberikan kontribusi terhadap pengembangan kajian \textit{Long-Horizon Vision-Language Navigation} (LH-VLN) melalui rancangan \textit{dataset} bilingual Indonesia-Inggris.
+    \item Memperkaya literatur mengenai \textit{code-switching} dalam konteks instruksi navigasi.
+    \item Menambah khazanah kajian pemanfaatan \textit{Large Language Models} \textit{in-the-loop} untuk pembangkitan \textit{dataset} bilingual Indonesia-Inggris.
+    \item Memberikan kontribusi bagi penguatan landasan keilmuan di bidang robotika dan kecerdasan buatan, khususnya pada kajian \textit{embodied} AI yang menghubungkan persepsi visual, pemahaman bahasa alami, dan perencanaan gerak dalam kerangka navigasi \textit{long-horizon}.
+% \end{enumerate}
+
+% \subsection*{2. Manfaat Praktis}
+% \begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item Menyediakan rancangan \textit{pipeline} generatif dan skema evaluasi yang dapat dijadikan acuan bagi peneliti lain dalam membangun \textit{dataset} navigasi bilingual atau \textit{code-switching} pada domain VLN maupun \textit{embodied AI} terkait.
+    \item Menjadi langkah awal bagi pengembangan sistem navigasi berbasis bahasa alami dalam konteks bahasa Indonesia dengan memanfaatkan \textit{dataset} yang berkualitas serta membangun ekosistem penelitian \textit{embodied} AI dan \textit{multilingual instruction following} di Indonesia.
+\end{enumerate}
+
+\vspace{0.5em}
+
+\section{Batasan Masalah}
+Batasan berikut diterapkan agar ruang lingkup penelitian terdefinisi secara tegas dan operasional:
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item Penelitian ini berfokus pada pembangkitan \textit{dataset} dan \textit{pipeline} generatif LLM \textit{in-the-loop} untuk instruksi navigasi \textit{long-horizon} dan tidak mencakup pelatihan maupun evaluasi kinerja agen navigasi berbasis \textit{reinforcement learning} atau algoritma pengendali lainnya.
+    \item Lingkungan yang digunakan dibatasi pada simulator Habitat dengan \textit{scene} yang diambil dari \textit{dataset} HM3D. Lingkungan dunia nyata dan simulator lain berada di luar cakupan penelitian.
+    \item Bahasa yang digunakan pada instruksi navigasi dibatasi pada \textit{code-switching} Indonesia-Inggris. Bahasa lain atau variasi \textit{multilingual} di luar pasangan Indonesia-Inggris tidak dibahas.
+    \item Modus interaksi dibatasi pada instruksi berbasis teks tertulis; penelitian tidak membahas pemetaan instruksi ke bentuk ujaran (ASR/TTS), multimodalitas tambahan (misalnya gestur), atau antarmuka manusia-robot secara langsung.
+    \item \textit{Large Language Models} yang digunakan diperlakukan sebagai \textit{black box} pada tingkat arsitektur. Fokus penelitian terletak pada perancangan \textit{prompt}, templat, pembatasan leksikal, serta prosedur evaluasi, bukan pada pengembangan atau modifikasi internal model bahasa itu sendiri.
+    \item Agen navigasi pada penelitian ini bergerak dengan aksi diskret di lingkungan \textit{indoor} berbasis \textit{dataset} HM3D. Aksi manipulasi objek (misalnya \textit{grasping}, \textit{releasing}) maupun model dinamika gerak kontinu tidak dibahas.
+    \item Label semantik objek dan \textit{scene} diperoleh dari model pengenal objek pralatih \textit{Recognize Anything (RAM)}. Kualitas dan kelengkapan label mengikuti keterbatasan model tersebut dan tidak dianotasi ulang secara manual atau diverifikasi secara menyeluruh oleh anotator manusia.
+    \item Pola \textit{code-switching} pada instruksi navigasi dikontrol melalui perancangan \textit{prompt} LLM (termasuk rasio penggunaan bahasa Indonesia dan Inggris serta peran masing-masing bahasa dalam struktur ujaran) dan tidak dimodelkan langsung dari korpus ujaran alami penutur dwibahasa.
+\end{enumerate}

@@ -1,0 +1,55 @@
+==== STATISTIK DASAR =====
+Jumlah utterance: 506
+Jumlah token total (incl. unk): 12881
+Jumlah token id/en saja       : 12510
+Jumlah token 'unk'            : 371
+Distribusi bahasa (id/en saja): {'id': 3145, 'en': 9365}
+
+===== METRIK CODE-MIXING (hanya id/en) =====
+M-index          : 0.603579
+Language Entropy : 0.813488 bit
+I-index (mean per-utt)        : 0.383364
+I-index (weighted, no-bound.) : 0.376624
+Burstiness (mean per-utt)     : -0.040680  [n=506/506]
+Memory (mean per-utt)         : -0.304733 [n=501/506]
+Span Entropy (mean per-utt)   : 1.536138 bit
+
+CMI (Gamb�ck & Das, hanya id/en):
+  CMI korpus (1 utterance) : 25.1399
+  CMI rata-rata semua utt  : 25.1511
+  CMI rata-rata utt mixed  : 25.1511
+
+===== DISTRIBUSI PER-UTTERANCE =====
+Semua utterance (setelah filter id/en):
+- I-index: n=506
+  mean=0.383364  median=0.392857  stdev=0.100339
+  min=0.027778  p10=0.250000  p25=0.318182  p75=0.453409  p90=0.500000  max=0.785714
+- Burstiness: n=506
+  mean=-0.040680  median=-0.017099  stdev=0.109751
+  min=-0.354926  p10=-0.200582  p25=-0.119496  p75=0.044273  p90=0.077615  max=0.297239
+- Memory: n=501
+  mean=-0.304733  median=-0.301095  stdev=0.199341
+  min=-1.000000  p10=-0.491238  p25=-0.404512  p75=-0.186551  p90=-0.100172  max=0.328798
+- Span Entropy: n=506
+  mean=1.536138  median=1.551098  stdev=0.383912
+  min=0.650022  p10=0.921928  p25=1.298795  p75=1.780672  p90=2.000000  max=2.405639
+
+Utterance mixed saja (mengandung id & en; unk diabaikan):
+- I-index (mixed): n=506
+  mean=0.383364  median=0.392857  stdev=0.100339
+  min=0.027778  p10=0.250000  p25=0.318182  p75=0.453409  p90=0.500000  max=0.785714
+- Burstiness (mixed): n=506
+  mean=-0.040680  median=-0.017099  stdev=0.109751
+  min=-0.354926  p10=-0.200582  p25=-0.119496  p75=0.044273  p90=0.077615  max=0.297239
+- Memory (mixed): n=501
+  mean=-0.304733  median=-0.301095  stdev=0.199341
+  min=-1.000000  p10=-0.491238  p25=-0.404512  p75=-0.186551  p90=-0.100172  max=0.328798
+- Span Entropy (mixed): n=506
+  mean=1.536138  median=1.551098  stdev=0.383912
+  min=0.650022  p10=0.921928  p25=1.298795  p75=1.780672  p90=2.000000  max=2.405639
+- CMI (mixed): n=506
+  mean=25.1511  median=24.0000  stdev=6.7500
+  min=5.4054  p10=18.1818  p25=20.8333  p75=28.5714  p90=32.0000  max=50.0000
+
+===== T-INDEX =====
+T-index (avg logprob MT)    : -0.598519962108949

@@ -1,0 +1,788 @@
+\chapter{METODOLOGI PENELITIAN}
+\label{Bab3}
+
+\section{Waktu dan Tempat Penelitian}
+Penelitian ini akan dilaksanakan dari bulan Agustus 2025 hingga April 2026. 
+Kegiatan penelitian dilakukan secara utama di 
+Human-Centered Robotics and Automation Laboratory (Hucenrotia Lab), EE806, 
+National Yang Ming Chiao Tung University yang berlokasi di 
+No.~1001 Daxue Rd., East Dist., Hsinchu City 300, Taiwan, 
+serta didukung oleh kegiatan penulisan dan diskusi akademik di 
+Gedung Kuliah Bersama Kampus C Universitas Airlangga, 
+Jalan Dr.~Ir.~H.~Soekarno, Kecamatan Mulyorejo, Surabaya, Indonesia.
+
+\vspace{0.5em}
+
+\section{Alat dan Bahan Penelitian}
+\label{sec:alat-bahan}
+
+\vspace{0.5em}
+
+\subsection{Alat Penelitian}
+Alat yang digunakan dalam penelitian ini meliputi perangkat keras dan perangkat lunak 
+sebagai berikut.
+\vspace{0.5em}
+% \begin{enumerate}[itemsep=0pt,parsep=0pt,topsep=0pt,label=\alph*.]
+
+\subsubsection{Komputer/Laptop Penelitian}
+Seluruh eksperimen dijalankan pada sebuah mesin \textit{remote desktop} yang 
+terhubung dengan \textit{server} komputasi berperforma tinggi. Spesifikasi lengkap 
+berdasarkan hasil pengukuran sistem adalah sebagai berikut.
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item Sistem operasi: Ubuntu 24.04.3 LTS dengan kernel 6.8.0-87-generic dan arsitektur x86\_64.
+    \item Prosesor: Intel(R) Core(TM) i9-14900K dengan 32 CPU logis (24 \textit{core}, 2 \textit{thread} per \textit{core}).
+    \item Memori utama (RAM): 125~GB.
+    \item GPU: NVIDIA RTX A5000 dengan kapasitas memori 24{,}6~GiB.
+    \item Media penyimpanan:
+        \begin{enumerate}[label=\arabic*., leftmargin=*, labelsep=0.33cm, itemsep=0pt, parsep=0pt, topsep=0pt]
+            \item Satu buah \textit{HDD} SATA berkapasitas 14{,}6~TB yang dikonfigurasi sebagai volume utama sistem.
+            \item Satu buah \textit{SSD NVMe} berkapasitas 1{,}8~TB untuk \textit{cache} dan berkas kerja eksperimen.
+        \end{enumerate}
+    \item Lingkungan eksekusi: sesi \textit{remote desktop} dan 
+          terminal SSH dengan \textit{virtual environment} Python.
+\end{enumerate}
+
+\vspace{0.5em}
+
+\subsubsection{Simulator Habitat}
+Penelitian ini menggunakan \textit{simulator} Habitat \parencite{szot2021habitat2} yang menyediakan 
+lingkungan virtual fotorealistis untuk mengeksekusi \textit{episode} navigasi 
+\textit{long-horizon}. Pustaka habitat-sim digunakan untuk:
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item Menginisialisasi agen robotik dengan sensor RGB-D dan parameter gerak.
+    \item Mengakses navmesh dan modul \textit{Greedy Geodesic Follower} 
+          sebagai \textit{planner} \textit{ground-truth} lintasan geodesik terpendek.
+    \item Merekam trajektori agen, termasuk posisi, orientasi, dan aksi pada 
+          setiap \textit{timestep}.
+\end{enumerate}
+
+\vspace{0.5em}
+
+\subsubsection{Pustaka Pemrograman dan Lingkungan Pengembangan}
+Implementasi \textit{pipeline} menggunakan bahasa pemrograman Python 
+(versi~3.11). Pustaka utama yang digunakan antara lain:
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item PyTorch untuk pemanggilan LLM 
+          dan model pendukung lainnya.
+    \item transformers untuk antarmuka model Qwen dan 
+          model MarianMT.
+    \item numpy, pandas, dan scipy 
+          untuk pemrosesan numerik dan statistik.
+    \item langid untuk deteksi bahasa otomatis tingkat token.
+\end{enumerate}
+
+\vspace{0.5em}
+
+\subsubsection{\textit{Large Language Model} (LLM)}
+Penelitian ini menggunakan keluarga \textit{Large Language Model} 
+Qwen-Instruct sebagai komponen utama \textit{in-the-loop}. 
+Secara khusus, model Qwen2.5-7B-Instruct 
+digunakan dalam dua peran:
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item LLM pembangkit tugas 
+          $\mathcal{G}_{\text{task}}$, yang menghasilkan konfigurasi 
+          tugas LH-VLN (instruksi global dan daftar subtugas) 
+          berdasarkan deskripsi \textit{scene} dan konfigurasi robot.
+    \item LLM pembangkit instruksi 
+          $\mathcal{G}_{\text{instr}}$, yang menghasilkan instruksi 
+          navigasi \textit{long-horizon} bilingual 
+          (Indonesia--Inggris) berdasarkan trajektori dan 
+          konteks visual yang telah disegmentasi.
+\end{enumerate}
+
+Pemilihan Qwen didasarkan pada beberapa pertimbangan:
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item Mendukung banyak bahasa dan memiliki performa yang baik 
+          pada bahasa Indonesia dan Inggris, sehingga sesuai 
+          untuk skenario \textit{code-switching} \parencite{koto23llm,nusacrowd, nusax}.
+    \item Tersedia sebagai model \textit{open-weight}, sehingga 
+          eksperimen dapat dijalankan secara lokal tanpa ketergantungan 
+          pada layanan \textit{cloud} \parencite{qwen25}.
+    \item Ukuran model yang sedang (\textit{medium-sized}) memungkinkan 
+          waktu inferensi yang realistis pada GPU tunggal \parencite{qlora}.
+\end{enumerate}
+
+\vspace{0.5em}
+
+\subsubsection{Model Pendukung Lain}
+Selain LLM utama, penelitian ini memanfaatkan beberapa model tambahan:
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item Model MarianMT (id--en dan en--id) untuk menghitung 
+          \textit{T-index}, yaitu skor kelayakan kata di titik 
+          \textit{code-switching} berdasarkan log-probabilitas terjemahan.
+    \item langid dan kamus kata bahasa Indonesia serta 
+          bahasa Inggris untuk penandaan bahasa (\textit{Language 
+          Identification}, LID) di tingkat token.
+\end{enumerate}
+\vspace{0.5em}
+
+% \end{enumerate}
+
+\subsection{Bahan Penelitian}
+\label{lab:bahan-penelitian}
+
+\begin{figure}[ht]
+\centering
+
+\begin{subfigure}{0.32\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/hm3d/1.png}
+\end{subfigure}
+\begin{subfigure}{0.32\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/hm3d/2.png}
+\end{subfigure}
+\begin{subfigure}{0.32\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/hm3d/3.png}
+\end{subfigure}
+
+\begin{subfigure}{0.32\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/hm3d/4.png}
+\end{subfigure}
+\begin{subfigure}{0.32\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/hm3d/5.png}
+\end{subfigure}
+\begin{subfigure}{0.32\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/hm3d/6.png}
+\end{subfigure}
+
+\begin{subfigure}{0.32\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/hm3d/7.png}
+\end{subfigure}
+\begin{subfigure}{0.32\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/hm3d/8.png}
+\end{subfigure}
+\begin{subfigure}{0.32\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{images/hm3d/9.png}
+\end{subfigure}
+
+\caption{Contoh \textit{Scene} dari HM3D \textit{Dataset}.}
+\label{fig:hm3d_dollhouse}
+\end{figure}
+
+Bahan penelitian yang digunakan berupa kumpulan \textit{scene} tiga dimensi 
+dari HM3D Dataset \parencite{HM3D2021}. Dalam penelitian ini, digunakan sebanyak 181 \textit{scene} 
+yang masing-masing merepresentasikan tata ruang interior yang realistis, 
+lengkap dengan informasi geometris, furnitur, dan objek-objek rumah tangga. 
+Pemilihan 181 \textit{scene} tersebut dilakukan secara terarah agar mencakup 
+variasi tata letak (seperti apartemen, rumah, dan kantor), tingkat 
+kompleksitas konektivitas antar-ruangan, serta keberagaman kategori objek 
+yang berpotensi menjadi target navigasi. Gambar~\ref{fig:hm3d_dollhouse} memperlihatkan beberapa contoh tampilan 
+\textit{dollhouse} \textit{scene} HM3D yang digunakan dalam penelitian.
+\vspace{0.5em}
+
+\section{Prosedur Penelitian}
+\label{sec:prosedur-penelitian}
+
+\vspace{0.5em}
+
+\subsection{Model Pendekatan Penelitian}
+Penelitian ini termasuk dalam kategori penelitian rekayasa 
+(\textit{engineering research}) dengan fokus pada perancangan dan evaluasi 
+sebuah \textit{pipeline} generatif untuk menghasilkan \textit{episode} 
+\textit{Long-Horizon Vision--Language Navigation} (LH-VLN) bilingual, 
+yaitu instruksi navigasi \textit{code-switching} Indonesia--Inggris 
+yang terhubung dengan trajektori navigasi di simulator. 
+Perancangan \textit{pipeline} ini diinspirasi oleh kerangka (LH-VLN) dan mekanisme
+pembangkitan \textit{episode} terstruktur (NavGen) \parencite{Song2025}.
+
+Secara konseptual, cara kerja penelitian mengikuti alur:
+(1) perumusan kebutuhan dan perancangan arsitektur \textit{pipeline} 
+serta metrik evaluasi,
+(2) implementasi dan integrasi komponen perangkat lunak 
+(\textit{simulator} Habitat, LLM, dan modul evaluasi),
+(3) pembangkitan dan kurasi dataset \textit{episode} LH-VLN bilingual 
+melalui \textit{pipeline} generatif,
+(4) analisis kuantitatif dan kualitatif terhadap dataset,
+serta (5) penarikan kesimpulan berdasarkan rumusan masalah 
+pada Bab~\ref{Bab1}.
+
+% Pada eksekusi nyata, setiap \textit{episode} navigasi dibatasi oleh 
+% parameter max\_step pada simulator. Dalam penelitian ini 
+% batas langkah maksimum per navigasi ditetapkan pada 500 langkah, 
+% dengan batas total langkah per tugas sekitar 2.000 langkah 
+% atau batas waktu komputasi sekitar 60 detik, mana yang tercapai lebih dahulu. 
+% Nilai ini dikalibrasi kembali pada tahap uji coba awal 
+% agar total waktu eksekusi seluruh eksperimen tetap realistis 
+% dengan sumber daya komputasi yang tersedia.
+
+\vspace{0.5em}
+
+\subsection{Alur Penelitian}
+Alur kerja penelitian secara keseluruhan digambarkan pada 
+Gambar~\ref{fig:pipeline-bilingual} yang memuat tahapan utama 
+mulai dari persiapan hingga penyusunan kesimpulan. 
+Secara naratif, alur pada Gambar~\ref{fig:pipeline-bilingual} 
+dapat dijelaskan sebagai berikut.
+Tahap pertama adalah persiapan dan studi literatur, yakni 
+pengumpulan dan pengkajian referensi terkait VLN, LH-VLN, 
+\textit{code-switching}, serta penggunaan LLM dalam \textit{robotics}.
+Tahap kedua adalah perumusan kebutuhan dan perancangan 
+\textit{pipeline} serta metrik evaluasi yang akan digunakan 
+(lihat Subbab~\ref{sec:metrik-evaluasi}).
+\begin{figure}[H]
+    \centering
+    \includegraphics[
+        width=1\textwidth,
+        trim=60 105 15 110, %kiri bawah kanan atas
+        clip
+    ]{images/alur-kerja-penelitian2.png}
+    \caption{\textit{Flowchart} Alur Kerja Penelitian yang Diusulkan.}
+    \label{fig:pipeline-bilingual}
+\end{figure}
+
+Tahap ketiga adalah implementasi dan uji coba awal, 
+yakni merealisasikan komponen \textit{pipeline} di atas simulator Habitat, 
+menyusun \textit{prompt} Qwen untuk tugas dan instruksi, 
+serta menguji eksekusi beberapa \textit{episode} percobaan untuk mengkalibrasi 
+parameter (batas langkah, jumlah sampel, ambang rasio bahasa, dan lain-lain).
+
+Tahap keempat adalah pengumpulan data melalui eksekusi 
+\textit{pipeline} generatif untuk menghasilkan kumpulan tugas dan instruksi 
+navigasi bilingual. Tahap kelima adalah analisis dan evaluasi 
+terhadap dataset tersebut baik secara kuantitatif maupun kualitatif. 
+Tahap terakhir adalah penyusunan hasil dan penarikan kesimpulan
+yang dikaitkan kembali dengan rumusan masalah dan tujuan penelitian.
+
+\vspace{0.5em}
+
+\subsection{Desain Ukuran dan Distribusi \textit{Dataset}}
+\label{subsec:desain-dataset}
+
+Agar \textit{dataset} yang dihasilkan memiliki cakupan yang cukup kaya namun tetap realistis dikerjakan dengan sumber daya komputasi yang tersedia, ukuran dan distribusi \textit{dataset} dirancang secara eksplisit pada beberapa level: level \textit{scene}, level tugas, level \textit{episode} sukses, serta distribusi jumlah subtugas dan panjang episode. Subbab ini menjabarkan target kuantitatif dan pertimbangannya. Desain ini dapat diringkas pada Gambar~\ref{fig:skema-dataset}. Adapun contoh data yang dihasilkan maupun yang digunakan pada penelitian ini dapat dilihat pada Lampiran~2.1 hingga Lampiran~2.4.
+\begin{figure}[H]
+    \centering
+    \includegraphics[
+        width=1\textwidth,
+        trim=20 175 20 175, %kiri bawah kanan atas
+        clip
+    ]{images/skema-dataset.pdf}
+    \caption{Skema Desain Ukuran dan Distribusi \textit{Dataset} pada Berbagai Level: 
+    \textit{Scene}, Tugas, \textit{Episode}, dan Segmen.}
+    \label{fig:skema-dataset}
+\end{figure}
+\vspace{0.5em}
+
+\subsubsection{Jumlah \textit{Scene}}
+
+Penelitian ini memanfaatkan 181 \textit{scene} rumah tangga dari HM3D \parencite{HM3D2021} yang telah disinggung pada Subbab~\ref{lab:bahan-penelitian}. Setiap \textit{scene} direpresentasikan sebagai graf navigasi tiga dimensi yang dapat dieksplorasi oleh agen. Kumpulan \textit{scene} ini dituliskan ke dalam bentuk metadata yang dapat dilihat pada Lampiran~2.1. Penggunaan 181 \textit{scene} dipilih dengan pertimbangan bahwa semakin banyak \textit{scene} yang digunakan, semakin beragam pula tata letak ruangan, tipe furnitur, dan konfigurasi objek yang muncul dalam trajektori. Selain itu, instruksi navigasi yang dihasilkan diharapkan mampu melakukan generalisasi dengan baik, sehingga tidak bergantung pada satu atau dua rumah tertentu, melainkan terdistribusi pada banyak lingkungan yang berbeda.
+
+\vspace{0.5em}
+
+\subsubsection{Jumlah Tugas}
+
+Untuk setiap \textit{scene}, generator tugas $G_{\text{task}}$ dirancang untuk membangkitkan rata-rata lima tugas LH-VLN yang berbeda. Dengan demikian, target jumlah tugas total adalah:
+\begin{equation*}
+    181 \text{ \textit{scene}} \times 5 \text{ tugas/\textit{scene}} = 905 \text{ tugas}.
+\end{equation*}
+Lima tugas per \textit{scene} dipilih sebagai kompromi antara cakupan yang cukup luas, di mana setiap \textit{scene} muncul dalam beberapa konfigurasi tugas yang berbeda, serta kemampuan dan pemanggilan LLM yang tetap terjangkau untuk satu mesin GPU selama periode penelitian.
+
+% Tugas yang terbukti tidak dapat dieksekusi (misalnya karena target tidak dapat dijangkau oleh agen) akan dibuang dan, jika perlu, digantikan oleh tugas baru pada \textit{scene} yang sama hingga mendekati target sekitar 900 tugas.
+
+\vspace{0.5em}
+
+\subsubsection{Jumlah \textit{Episode} Sukses}
+
+Setiap tugas dieksekusi oleh agen dalam simulator Habitat untuk menghasilkan trajektori. Satu eksekusi lengkap terhadap sebuah tugas disebut satu \textit{episode}. Karena tidak semua eksekusi akan berhasil (gagal menemukan jalur, melebihi batas langkah, atau melampaui batas waktu), penelitian ini tidak mensyaratkan bahwa setiap tugas harus menghasilkan tepat satu \textit{episode} sukses.
+
+Desain yang digunakan adalah sebagai berikut:
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item Untuk setiap tugas, agen diperbolehkan beberapa percobaan eksekusi hingga batas maksimum tertentu.
+    \item \textit{Episode} yang berhasil menyelesaikan seluruh subtugas dalam batas langkah dan waktu disebut \textit{episode} sukses dan dimasukkan ke himpunan $D_{\text{traj}}$.
+    \item \textit{Episode} gagal hanya digunakan untuk menghitung statistik kegagalan, tetapi tidak diteruskan ke tahap segmentasi dan pembangkitan instruksi.
+\end{enumerate}
+
+Dengan konfigurasi tersebut, penelitian ini menargetkan sekitar 500 \textit{episode} sukses yang akhirnya membentuk \textit{dataset} utama $D^*$. Angka ini dianggap realistis dengan mempertimbangkan adanya sebagian tugas yang tidak dapat dieksekusi atau sulit diselesaikan oleh agen, serta keterbatasan waktu komputasi yang tersedia.
+
+\vspace{0.5em}
+
+\subsubsection{Sebaran Jumlah Subtugas per Tugas}
+
+Generator tugas $G_{\text{task}}$ dibatasi untuk menghasilkan tugas dengan 2 sampai 6 subtugas (aksi simbolik seperti \textit{Move}, \textit{Grab}, dan \textit{Release}). Rentang ini dipilih untuk menyeimbangkan dua kebutuhan: (i) tugas cukup panjang untuk merepresentasikan skenario \textit{long-horizon}, tetapi (ii) tidak terlalu panjang sehingga tingkat kegagalan eksekusi meningkat dan biaya komputasi per episode menjadi tidak efisien.
+
+Untuk menjaga variasi kompleksitas sekaligus memastikan setiap kategori memiliki jumlah sampel yang memadai untuk analisis, target sebaran jumlah subtugas per tugas ditetapkan sebagai berikut:
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item Sekitar 70\% tugas memiliki 3--4 subtugas (kasus \textit{typical} yang diharapkan menjadi mayoritas sehingga metrik evaluasi stabil),
+    \item Sekitar 25\% tugas memiliki 2 subtugas (tugas relatif sederhana sebagai pembanding dan untuk menjaga keberagaman tingkat kesulitan),
+    \item Sekitar 5\% tugas memiliki 5--6 subtugas (tugas lebih kompleks/\textit{long-horizon}, namun dibatasi agar tidak mendominasi karena lebih rentan gagal dan lebih mahal secara komputasi).
+\end{enumerate}
+
+\noindent Sebaran ini direalisasikan melalui pengendalian generasi dan kurasi: (1) sebelum menghasilkan tugas, sistem menentukan target jumlah subtugas $k \in \{2,3,4,5,6\}$ berdasarkan proporsi di atas, lalu (2) \textit{prompt} pada $G_{\text{task}}$ menginstruksikan LLM untuk menghasilkan tepat $k$ aksi simbolik. Keluaran kemudian divalidasi; apabila jumlah subtugas tidak sesuai atau melanggar aturan format, proses generasi diulang (\textit{resampling}) hingga komposisi dataset mendekati target sebaran dalam toleransi yang ditentukan.
+
+\vspace{0.5em}
+
+\subsubsection{Panjang \textit{Episode} dan Jumlah Segmen}
+
+Panjang \textit{episode} diukur dalam jumlah langkah simulasi (\textit{time step}) yang diambil agen dari awal hingga seluruh subtugas terselesaikan atau batas langkah tercapai. Untuk menjamin karakter \textit{long-horizon}, perancangan \textit{episode} mengikuti prinsip berikut:
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item \textit{Episode} dibatasi oleh maksimum jumlah langkah 500 per \textit{episode}.
+    \item Melalui desain tugas multi-subtugas dan pemilihan target yang memiliki jarak geodesik cukup besar, diharapkan panjang \textit{episode} sukses rata-rata berada di kisaran 150-300 langkah, dengan sebagian \textit{episode} yang lebih kompleks melebihi 300 langkah namun tetap berada di bawah batas 500 langkah.
+    \item Secara praktis, targetnya adalah setidaknya sepertiga \textit{episode} sukses memiliki panjang trajektori di atas 200 langkah sehingga sifat \textit{long-horizon} benar-benar tercermin di dalam \textit{dataset}.
+\end{enumerate}
+
+\textit{Episode} sukses kemudian dipecah oleh modul segmentasi $S_{\text{seg}}$ menjadi beberapa segmen berdasarkan perubahan target lokal dan pola aksi. Dengan rata-rata 3-4 subtugas per tugas, setiap \textit{episode} diharapkan menghasilkan sekitar 4-6 segmen yang berbeda (misalnya 1--2 segmen per subtugas, bergantung pada dinamika navigasi). 
+Jika target \textit{episode} sukses sekitar 500, maka jumlah segmen yang dihasilkan berada pada kisaran
+\begin{equation*}
+    500 \times 4 = 2{.}000 \quad \text{sampai} \quad 500 \times 6 = 3{.}000 \text{ segmen}.
+\end{equation*}
+Dengan demikian, \textit{dataset} akhir $D^*$ ditargetkan memuat sekitar 2{.}000-3{.}000 segmen beserta instruksi navigasi bilingual yang menyertainya. Jumlah segmen pada skala ini dinilai cukup untuk:
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item Melakukan analisis statistik \textit{code-switching} yang stabil di tingkat korpus, dan
+    \item Mengevaluasi variasi pola bahasa lintas \textit{scene}, lintas konfigurasi robot, dan lintas tingkat kompleksitas tugas.
+\end{enumerate}
+
+\vspace{0.5em}
+
+\subsection{Teknik Pengumpulan Data}
+
+Teknik pengumpulan data pada penelitian ini berupa eksperimen komputasional yang dijalankan di atas simulator Habitat. Seluruh data diperoleh sebagai keluaran dari tiga komponen utama: \textit{pipeline} generatif \textit{LLM in-the-loop}, modul simulasi navigasi, dan modul pemrosesan trajektori. Secara ringkas, alur pengumpulan data ditunjukkan pada Gambar~\ref{fig:pipeline-dc}, sedangkan ringkasan jenis data yang dikumpulkan dirangkum pada Tabel~\ref{tab:jenis-data}. 
+
+\begin{table}[ht]
+    \centering
+    {\fontsize{10}{12}\selectfont
+    \renewcommand{\arraystretch}{1.15}
+
+    \caption{Ringkasan Jenis Data yang Ada Pada \textit{Pipeline}.}
+    \label{tab:jenis-data}
+
+    \begin{tabularx}{\textwidth}{X X X}
+        \toprule
+        \textbf{Jenis data} & \textbf{Digunakan pada} & \textbf{Contoh/format} \\
+        \midrule
+        Metadata \textit{scene} dan objek HM3D
+        & Perancangan tugas dan pemilihan target
+        & ID \textit{scene}, kategori objek, region ruangan \\
+
+        Deskripsi tugas LH-VLN
+        & Eksekusi simulasi dan analisis tugas
+        & Berkas konfigurasi berisi \textit{task instruction}, daftar subtugas, dan target \\
+
+        Log trajektori navigasi
+        & Perhitungan metrik navigasi
+        & Urutan posisi $(x,y,z)$, orientasi, aksi, waktu/\textit{timestep}, status keberhasilan, dan referensi citra kamera \\
+
+        Segmen trajektori dan konteks visual
+        & Pembangkit instruksi
+        & Potongan trajektori dengan indeks langkah $[u,v]$, target lokal, urutan aksi, dan \textit{scene tags} \\
+
+        Instruksi navigasi bilingual + LID
+        & Analisis \textit{code-switching} dan evaluasi bahasa
+        & Teks instruksi + label bahasa per token (definisi token konsisten; lihat uraian LID) \\
+        \bottomrule
+    \end{tabularx}
+    }
+\end{table}
+
+Pada tahap awal, peneliti menetapkan konfigurasi lingkungan dan parameter eksperimen. Secara formal didefinisikan himpunan \textit{scene} HM3D yang digunakan $\mathcal{S}$, himpunan jenis robot $\mathcal{R}$, serta parameter skala data yang mengaitkan proses pembangkitan dan hasil akhir sebagai berikut:
+\begin{itemize}[left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt]
+    \item $N \in \mathbb{N}$: target jumlah entri dataset akhir $\mathcal{D}^*$ \textit{setelah} seluruh tahap penyaringan (validasi konfigurasi, keterjangkauan geodesik, serta seleksi \textit{success episode}). Dengan kata lain, $N$ adalah target ukuran hasil akhir yang diinginkan.
+    \item $L \in \mathbb{N}$: jumlah percobaan pembangkitan konfigurasi tugas (\textit{generation attempts}) menggunakan LLM tugas $\mathcal{G}_{\mathrm{task}}$. Tahap ini menghasilkan himpunan konfigurasi valid $\mathcal{D}_{\mathrm{config}}$ dengan ukuran $|\mathcal{D}_{\mathrm{config}}|\leq L$.
+    \item $M \in \mathbb{N}$: jumlah percobaan eksekusi simulasi per tugas (\textit{episode attempts}) pada simulator, misalnya untuk variasi \textit{seed} atau kondisi awal yang ditentukan pada konfigurasi eksperimen. Tahap ini menghasilkan himpunan trajektori sukses $\mathcal{D}_{\mathrm{traj}}$ dengan ukuran yang bergantung pada tingkat keberhasilan eksekusi.
+\end{itemize}
+Selain itu ditentukan pula batas langkah maksimum $K_{\max}$, batas waktu eksekusi (\textit{timeout}), jarak keberhasilan $d_{\mathrm{succ}}$, serta parameter lain terkait jumlah percobaan per tugas. Seluruh parameter disimpan dalam berkas konfigurasi dan diberikan sebagai argumen saat pemanggilan program.
+
+Secara konseptual, alur ukuran data mengikuti rantai berikut:
+\[
+L \;\rightarrow\; |\mathcal{D}_{\mathrm{config}}| \;\rightarrow\; |\mathcal{D}_{\mathrm{traj}}| \;\rightarrow\; |\mathcal{E}| \;\rightarrow\; |\mathcal{D}^*|\approx N,
+\]
+dengan $\mathcal{E}$ menyatakan himpunan \textit{episode} beserta instruksi bilingual yang dihasilkan, dan $\mathcal{D}^*$ menyatakan struktur dataset akhir yang menggabungkan seluruh komponen (lihat bagian penutup subbab ini).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth,
+    trim={0mm 0mm 0mm 0mm},
+    clip]{images/flowchart-pengumpulan-data.pdf}
+\caption{\textit{Flowchart} Alur Pengumpulan Data Melalui \textit{Pipeline}.}
+\label{fig:pipeline-dc}
+\end{figure}
+
+% \paragraph{(1) Pembangkitan konfigurasi tugas LH-VLN dengan $\mathcal{G}_{\mathrm{task}}$.}
+Langkah pertama pengumpulan data adalah membangkitkan konfigurasi tugas LH-VLN menggunakan LLM tugas $\mathcal{G}_{\mathrm{task}}$. Pada setiap percobaan pembangkitan $i=1,\dots,L$, sistem mengambil sampel \textit{scene} $s \in \mathcal{S}$ dan robot $r \in \mathcal{R}$, kemudian menyusun \textit{prompt} tugas yang terstruktur. \textit{Prompt} ini mencakup:
+\begin{enumerate}[label=(\arabic*), left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt]
+    \item \textit{System message} yang mendefinisikan peran model sebagai perancang tugas navigasi,
+    \item Bagian aturan (\textit{rules}) yang menentukan format keluaran JSON, jumlah dan jenis subtugas, serta batasan objek/langkah,
+    \item Satu contoh lengkap (\textit{one-shot example}) yang memetakan deskripsi \textit{scene} ke keluaran yang diinginkan, dan
+    \item Deskripsi \textit{scene} dan konfigurasi robot yang aktual.
+\end{enumerate}
+Rincian naskah sistem, himpunan aturan, serta contoh \textit{one-shot} untuk $\mathcal{G}_{\mathrm{task}}$ disajikan pada Lampiran~1.
+
+Keluaran $\mathcal{G}_{\mathrm{task}}$ berupa teks mentah $y_{\mathrm{raw}}$ kemudian di-\textit{parse} menjadi struktur JSON $t$. Struktur $t$ memuat instruksi tugas global (\textit{task instruction}), daftar subtugas simbolik \textit{berbasis navigasi} (misalnya \textit{Move\_to}, \textit{Turn}, \textit{Stop}), daftar objek, serta daftar region. Setiap konfigurasi $t$ selanjutnya melalui validasi sintaksis dan semantik berikut:
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item Struktur JSON harus dapat diurai tanpa kesalahan.
+    \item Seluruh objek dan region yang dirujuk pada subtugas harus terdapat dalam metadata \textit{scene} $s$ yang bersesuaian.
+    \item Tugas tidak boleh bergantung pada penamaan teknis yang tidak natural untuk pengguna manusia (misalnya label numerik abstrak untuk region).
+\end{enumerate}
+Konfigurasi yang dinyatakan valid disimpan sebagai berkas konfigurasi tugas dan membentuk himpunan $\mathcal{D}_{\mathrm{config}}$.
+
+% \paragraph{(2) Eksekusi tugas di Habitat dengan $\mathcal{S}_{\mathrm{sim}}$ dan definisi operasional keterlaksanaan.}
+Setiap konfigurasi tugas $t \in \mathcal{D}_{\mathrm{config}}$ kemudian dieksekusi pada simulator Habitat menggunakan modul $\mathcal{S}_{\mathrm{sim}}$. Untuk setiap subtugas dalam $t$, perencana jalur geodesik (\textit{Greedy Geodesic Follower}) menghitung lintasan terpendek pada \textit{navmesh} dan menghasilkan urutan aksi navigasi.
+
+\begin{algorithm}[!ht]
+\caption{\algfontsize{Pembangkitan LH-VLN Bilingual (ID--EN)}}
+\label{alg:lhvln-bilingual-pipeline}
+\begingroup\fontsize{10}{12}\selectfont
+\begin{algorithmic}[1]
+\Require scene $\mathcal{S}$ (dengan metadata), robot $\mathcal{R}$, simulator $\mathcal{S}_{\mathrm{sim}}$,
+        LLM konfigurasi tugas $\mathcal{G}_{\mathrm{task}}$,
+        LLM instruksi $\mathcal{G}_{\mathrm{instr}}$ + prompt bilingual,
+        $L, M, K_{\max}, K_{\min}, d_{\mathrm{succ}}$,
+        model tag scene $\mathcal{V}_{\mathrm{scene}}$,
+        segmentor aksi $\mathcal{S}_{\mathrm{seg}}^{\mathrm{aksi}}$.
+\Ensure $\mathcal{D}_{\mathrm{cfg}}$ (konfigurasi valid),
+        $\mathcal{D}_{\mathrm{traj}}$ (trajektori sukses),
+        $\mathcal{E}$ (episode + instruksi bilingual).
+
+\State $\mathcal{D}_{\mathrm{cfg}}\gets\emptyset$;\;
+       $\mathcal{D}_{\mathrm{traj}}\gets\emptyset$;\;
+       $\mathcal{E}\gets\emptyset$
+
+\Statex \textbf{Stage 1: Generate task configurations} 
+\For{$i\gets 1$ \textbf{to} $L$}
+  \State $(s,r)\sim(\mathcal{S},\mathcal{R})$
+  \State $y\gets \mathcal{G}_{\mathrm{task}}\!\left(\Phi(s,r)\right)$
+  \State $t\gets \textsc{ParseJSON}(y)$
+  \If{$t=\bot$ \textbf{or} $\neg\textsc{ValidTask}(t,s)$}
+    \State \textbf{continue}
+  \EndIf
+  \State $t\gets \textsc{AugmentMeta}(t,s,r)$
+  \State $\mathcal{D}_{\mathrm{cfg}}\gets \mathcal{D}_{\mathrm{cfg}}\cup\{t\}$
+\EndFor
+
+\Statex \textbf{Stage 2: Shortest-path rollout in simulator} 
+\ForAll{$t\in\mathcal{D}_{\mathrm{cfg}}$}
+  \For{$m\gets 1$ \textbf{to} $M$}
+    \If{$\neg\textsc{GeodesicReachable}(t,\mathcal{S}_{\mathrm{sim}})$}
+      \State \textbf{break}
+    \EndIf
+    \State $\tau\gets \textsc{ShortestPathRollout}(t,\mathcal{S}_{\mathrm{sim}},K_{\max})$
+    \If{$\textsc{Success}(\tau,t,d_{\mathrm{succ}})$}
+      \State $\mathcal{D}_{\mathrm{traj}}\gets \mathcal{D}_{\mathrm{traj}}\cup\{\tau\}$
+    \EndIf
+  \EndFor
+\EndFor
+
+\Statex \textbf{Stage 3: Action segmentation + visual context} 
+\ForAll{$\tau\in\mathcal{D}_{\mathrm{traj}}$}
+  \State $\mathcal{Z}\gets \textsc{Segment}(\tau,\mathcal{S}_{\mathrm{seg}}^{\mathrm{aksi}},K_{\min})$
+  \ForAll{$\zeta\in\mathcal{Z}$}
+    \State $T_{\mathrm{scene}}\gets \mathcal{V}_{\mathrm{scene}}(\zeta.\mathcal{I})$
+    \State $z\gets(\text{id},u,v,\tau^\star,\text{aksi},T_{\mathrm{scene}})$
+    \State $\textsc{StoreSegment}(z)$
+  \EndFor
+\EndFor
+
+\Statex \textbf{Stage 4: Bilingual instruction synthesis} 
+\ForAll{episode $j$ dibentuk oleh $\Gamma(\cdot)$}
+  \State $(\mathbf{c}^{(j)},\mathbf{m}^{(j)})\gets \textsc{BuildContext}(j)$
+  \State $p^{(j)}\gets \Psi(\mathbf{c}^{(j)},\mathbf{m}^{(j)},\text{rules}_{\mathrm{cs}})$
+  \State $y^{(j)}\gets \mathcal{G}_{\mathrm{instr}}(p^{(j)})$
+  \State $\mathcal{E}\gets \mathcal{E}\cup\{(\mathbf{m}^{(j)},\mathbf{c}^{(j)},y^{(j)})\}$
+\EndFor
+
+\State \Return $\mathcal{D}_{\mathrm{cfg}},\mathcal{D}_{\mathrm{traj}},\mathcal{E}$
+\end{algorithmic}
+\endgroup
+\end{algorithm}
+
+Algoritma~\ref{alg:lhvln-bilingual-pipeline} merangkum \textit{pipeline} pembangkitan dataset LH-VLN bilingual (ID--EN) yang terdiri dari empat tahap utama. Pada bagian pertama, sistem melakukan $L$ kali percobaan pembangkitan konfigurasi tugas dengan mengambil sampel pasangan $(s,r)$ dari himpunan \textit{scene} $\mathcal{S}$ dan robot $\mathcal{R}$, lalu memanggil LLM konfigurasi tugas $\mathcal{G}_{\mathrm{task}}$ untuk menghasilkan keluaran mentah yang diurai menjadi JSON $t$; konfigurasi yang gagal di-\textit{parse} atau tidak lolos validasi (\textsc{ValidTask}) dibuang, sedangkan konfigurasi valid diperkaya metadata (\textsc{AugmentMeta}) dan dikumpulkan ke $\mathcal{D}_{\mathrm{cfg}}$. Pada bagian kedua, setiap konfigurasi $t\in\mathcal{D}_{\mathrm{cfg}}$ dieksekusi pada simulator $\mathcal{S}_{\mathrm{sim}}$ hingga $M$ kali percobaan; tugas terlebih dahulu dicek keterjangkauannya pada \textit{navmesh} (\textsc{GeodesicReachable}), kemudian dilakukan \textit{rollout} lintasan terpendek (\textsc{ShortestPathRollout}) dengan batas langkah $K_{\max}$, dan hanya \textit{episode} yang memenuhi kriteria keberhasilan (\textsc{Success}) dengan ambang jarak $d_{\mathrm{succ}}$ yang disimpan sebagai trajektori sukses ke $\mathcal{D}_{\mathrm{traj}}$. Selanjutnya pada bagian ketiga, setiap trajektori sukses $\tau\in\mathcal{D}_{\mathrm{traj}}$ disegmentasi menjadi unit rencana lokal menggunakan segmentor aksi $\mathcal{S}_{\mathrm{seg}}^{\mathrm{aksi}}$ dengan panjang minimum $K_{\min}$; untuk setiap segmen, konteks visual dihimpun dari citra $\zeta.\mathcal{I}$ dan diproses oleh model tag adegan $\mathcal{V}_{\mathrm{scene}}$ untuk menghasilkan \textit{scene tags} yang kemudian disimpan bersama metadata segmen. Terakhir, pada bagian keempat, segmen-segmen dikelompokkan menjadi \textit{episode} (melalui $\Gamma(\cdot)$), dibangun konteks dan metadata (\textsc{BuildContext}), disusun \textit{prompt} instruksi dengan aturan \textit{code-switch} ($\mathrm{rules}_{\mathrm{cs}}$) melalui $\Psi(\cdot)$, lalu LLM instruksi $\mathcal{G}_{\mathrm{instr}}$ menghasilkan instruksi navigasi bilingual $y^{(j)}$; pasangan (metadata, konteks, instruksi) dikumpulkan dalam himpunan $\mathcal{E}$ sebagai keluaran akhir \textit{pipeline}.
+
+Definisi operasional tugas dapat dieksekusi pada penelitian ini adalah: sebuah tugas $t$ dinyatakan \textit{dapat dieksekusi} jika untuk setiap subgoal/target yang diminta dalam $t$, jarak geodesik yang dihitung pada \textit{navmesh} bersifat hingga (finite). Jika jarak geodesik terhadap salah satu target tak terhingga, maka tugas diklasifikasikan sebagai tugas yang tidak dapat dieksekusi dan tidak digunakan pada tahap berikutnya. Kriteria ini memeriksa keterjangkauan berbasis navigasi pada \textit{navmesh} dan tidak dimaksudkan sebagai pemeriksaan kelayakan lain di luar cakupan tersebut.
+
+Untuk tugas yang dapat dieksekusi, agen dijalankan langkah demi langkah mengikuti lintasan rencana hingga salah satu kondisi tercapai:
+\begin{enumerate}[label=(\arabic*), left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt]
+    \item Semua target berhasil dicapai dengan jarak akhir di bawah ambang $d_{\mathrm{succ}}$ sebelum jumlah langkah mencapai $K_{\max}$, atau
+    \item jumlah langkah mencapai $K_{\max}$ tanpa keberhasilan penuh (atau eksekusi dihentikan oleh \textit{timeout} sesuai konfigurasi).
+\end{enumerate}
+Pada setiap langkah $k$, sistem merekam log terstruktur yang mencakup: posisi tiga dimensi $(x,y,z)$, orientasi, aksi yang diambil, penanda waktu/\textit{timestep}, status eksekusi, serta citra kamera. Penyimpanan dilakukan dalam berkas terstruktur (misalnya JSON/CSV) dan/atau jalur berkas citra (misalnya \textit{path}) yang dapat direferensikan kembali pada tahap pemrosesan trajektori; detail format file mengikuti konfigurasi eksperimen.
+
+Hanya trajektori yang berhasil (\textit{success episode}) yang dimasukkan ke himpunan trajektori rujukan $\mathcal{D}_{\mathrm{traj}}$. \textit{Episode} yang gagal tidak dimasukkan ke $\mathcal{D}_{\mathrm{traj}}$, namun tetap dapat digunakan untuk ringkasan metrik navigasi pada tahap analisis.
+
+% \paragraph{(3) Segmentasi trajektori dan pembentukan konteks visual dengan $\mathcal{S}_{\mathrm{seg}}$ dan $\mathcal{V}_{\mathrm{scene}}$.}
+Dari setiap trajektori sukses $d \in \mathcal{D}_{\mathrm{traj}}$, modul segmentasi $\mathcal{S}_{\mathrm{seg}}$ menurunkannya menjadi serangkaian segmen yang lebih pendek. Segmentasi dilakukan agar setiap segmen merepresentasikan satu unit rencana lokal yang koheren. Secara operasional, sistem membentuk segmen berdasarkan dua pemicu utama:
+\begin{enumerate}[label=(\arabic*), left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt]
+    \item Perubahan target lokal: segmen diakhiri ketika target/subgoal lokal berganti (sesuai urutan subtugas dalam konfigurasi $t$).
+    \item Pola aksi : $\mathcal{S}_{\mathrm{seg}}$ dapat memecah lebih lanjut berdasarkan pola aksi agar rangkaian aksi di dalam segmen tetap koheren sebagai satu langkah/sub-rencana.
+\end{enumerate}
+Setiap segmen direpresentasikan oleh rentang indeks langkah $[u,v]$ pada trajektori asal. Segmen dengan panjang kurang dari $K_{\min}$ (dalam jumlah langkah) dibuang, sedangkan segmen yang lolos disimpan beserta identitas trajektori asal, target lokal, dan urutan aksi pada rentang tersebut.
+
+Untuk setiap segmen $[u,v]$, sistem menghimpun citra kamera yang terkait dengan langkah-langkah pada rentang tersebut, lalu memprosesnya menggunakan model visi adegan $\mathcal{V}_{\mathrm{scene}}$ (misalnya \textit{Recognize Anything Model} \parencite{huang2023openset}) untuk menghasilkan himpunan \textit{scene tags} $T_{\mathrm{scene}}(u,v)$. Secara operasional, himpunan citra yang dipakai (misalnya subset frame tertentu atau seluruh frame pada segmen) serta cara agregasi \textit{tags} lintas multi-frame (misalnya pemilihan \textit{top-}$(k)$ atau ambang skor) ditentukan pada konfigurasi eksperimen. Keluaran yang disimpan minimal berupa daftar \textit{tags}; apabila model menyediakan skor/kepercayaan, informasi tersebut dapat ikut disimpan sebagai bagian dari log terstruktur.
+
+Hasil tahap ini adalah daftar segmen
+\[
+L_{\mathrm{seg}}=\{z^{(\ell)}\}_{\ell=1}^{L_{\mathrm{seg}}}, 
+\]
+dengan $L_{\mathrm{seg}}$ menyatakan jumlah segmen total yang dihasilkan dari seluruh trajektori sukses. Setiap entri $z^{(\ell)}$ memuat: identitas trajektori asal, indeks awal--akhir segmen $[u,v]$, target lokal, urutan aksi, dan himpunan \textit{scene tags}.
+
+% \paragraph{(4) Pembentukan \textit{episode} dan pembangkitan instruksi bilingual dengan $\mathcal{G}_{\mathrm{instr}}$.}
+Berdasarkan daftar segmen $L_{\mathrm{seg}}$, sistem membangun \textit{episode} LH-VLN dengan mengelompokkan segmen yang memiliki trajektori asal dan target global yang sama. Untuk setiap \textit{episode}, dibentuk struktur konteks navigasi yang memuat target global $\tau$, serta urutan pasangan (\textit{actions}, \textit{scene tags}) untuk seluruh segmen dalam \textit{episode}. Struktur konteks ini dikombinasikan dengan metadata \textit{episode} (ID \textit{scene}, jenis robot, objek target, region, serta posisi dan orientasi awal--akhir) untuk menyusun \textit{prompt} instruksi bagi LLM $\mathcal{G}_{\mathrm{instr}}$.
+
+\textit{Prompt} instruksi meliputi:
+\begin{enumerate}[label=(\arabic*), left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt]
+    \item \textit{System message} yang menjelaskan bahwa model harus menghasilkan instruksi navigasi untuk robot,
+    \item himpunan aturan bahasa yang mengatur pola \textit{code-switch} (misalnya bahasa Indonesia digunakan untuk struktur langkah dan relasi gerak, sedangkan nama objek atau landmark dipertahankan dalam bahasa Inggris),
+    \item Representasi rencana navigasi sebagai urutan langkah dengan ringkasan aksi dan konteks visual, serta
+    \item Satu contoh \textit{one-shot} yang menunjukkan pasangan rencana--instruksi bilingual yang diharapkan.
+\end{enumerate}
+Template lengkap \textit{prompt} untuk $\mathcal{G}_{\mathrm{instr}}$, termasuk aturan \textit{code-switch} dan contoh \textit{one-shot}, disajikan pada Lampiran~1.
+
+Keluaran $\mathcal{G}_{\mathrm{instr}}$ berupa teks instruksi navigasi bilingual untuk satu \textit{episode} LH-VLN, dengan panjang sekitar 1--3 kalimat dan berkisar 18--35 token kata. Pada subbab ini, istilah \textit{token kata} merujuk pada tokenisasi berbasis kata (misalnya pemisahan berdasarkan spasi/tanda baca) yang konsisten dengan statistik panjang instruksi yang dilaporkan. Parameter inferensi (misalnya suhu, \textit{top-p}, dan batas token baru) disesuaikan agar instruksi tetap ringkas namun mencakup seluruh langkah penting, sesuai konfigurasi eksperimen.
+
+% \paragraph{(5) Perakitan dataset akhir dan anotasi LID.}
+Sebagai langkah akhir pengumpulan data, seluruh komponen yang dihasilkan digabungkan ke dalam satu struktur dataset. Setiap entri dalam dataset akhir $\mathcal{D}^*$ memuat komponen-komponen yang selaras dengan Tabel~\ref{tab:jenis-data}, yaitu:
+\begin{itemize}[left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt]
+    \item Metadata \textit{scene} dan robot: ID \textit{scene}, konfigurasi robot, serta metadata target/region yang relevan.
+    \item Deskripsi tugas LH-VLN: instruksi tugas global (\textit{task instruction}) dan daftar subtugas/target dalam konfigurasi $t$.
+    \item Log trajektori: log langkah demi langkah yang mencakup posisi, orientasi, aksi, waktu/\textit{timestep}, status, dan referensi citra kamera.
+    \item Segmen trajektori + konteks visual: daftar segmen $z^{(\ell)}$ beserta indeks $[u,v]$, target lokal, urutan aksi, dan $T_{\mathrm{scene}}(u,v)$.
+    \item Instruksi bilingual + anotasi LID: instruksi yang dihasilkan $\mathcal{G}_{\mathrm{instr}}$ dan label bahasa per token.
+\end{itemize}
+Anotasi bahasa per token dilakukan menggunakan prosedur identifikasi bahasa (LID) yang dijelaskan pada subbab analisis data, sehingga instruksi dilengkapi label bahasa (Indonesia/Inggris) untuk kepentingan analisis \textit{code-switching}. Untuk konsistensi dengan LID, token yang digunakan pada anotasi ini mengikuti definisi tokenisasi yang sama (token berbasis kata) sebagaimana dipakai pada statistik panjang instruksi.
+\vspace{0.5em}
+
+\subsection{Teknik Analisis Data}
+\label{sec:teknik-analisis-data}
+Teknik analisis data dalam penelitian ini menggabungkan pendekatan 
+kuantitatif dan kualitatif. 
+Analisis kuantitatif berfokus pada metrik navigasi dan metrik 
+\textit{code-switching} yang dihitung secara objektif, sedangkan 
+analisis kualitatif menekankan interpretasi linguistik dan 
+keterbacaan instruksi.
+
+\vspace{0.5em}
+
+\subsubsection{Analisis Kuantitatif}
+Analisis kuantitatif dilakukan dengan menghitung berbagai metrik 
+navigasi dan metrik \textit{code-switching} terhadap kumpulan 
+instruksi pada $\mathcal{D}^*$.
+Untuk setiap tugas yang berhasil dieksekusi, akan dihitung beberapa metrik
+navigasi berdasarkan \textit{time cost, fail tasks, mean navigation step, mean
+task success rate}, dan \textit{mean navigation success rate}. 
+Metrik-metrik tersebut menggambarkan kualitas perencanaan 
+dan efisiensi eksekusi navigasi pada \textit{pipeline} yang diusulkan.
+
+Sebelum menghitung metrik \textit{code-switching}, dilakukan 
+penandaan bahasa untuk setiap token pada instruksi 
+$d_{\text{ins}}$. 
+Prosedurnya sebagai berikut:
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item Teks instruksi dinormalisasi dan ditokenisasi pada 
+          tingkat kata alfabetis.
+    \item Jika token terdapat pada kamus bahasa Indonesia, 
+          maka diberi label id; 
+          jika terdapat pada kamus bahasa Inggris, diberi label en.
+    \item Jika tidak terdapat pada kedua kamus, 
+          digunakan langid yang dibatasi hanya pada label 
+          id dan en. 
+          Apabila skor kepercayaan di bawah ambang (misalnya 0{,}8), 
+          token diberi label unk.
+\end{enumerate}
+Metrik \textit{code-switching} dihitung hanya pada token 
+yang berlabel id atau en, sementara 
+token unk diabaikan.
+Berdasarkan urutan label bahasa yang diperoleh, 
+akan dihitung metrik-metrik meliputi M-index, 
+Language Entropy, I-index, Burstiness, Memory,
+Span Entropy, Code-Mixing Index, dan T-index.
+Kumpulan metrik ini memberikan gambaran objektif mengenai 
+rasio bahasa, pola peralihan, dan konsistensi 
+\textit{code-switching} pada dataset instruksi. 
+Detail perhitungan metrik-metrik tersebut dapat ditemukan pada 
+Subbab~\ref{sec:metrik-evaluasi}.
+
+\vspace{0.5em}
+
+\subsubsection{Analisis Kualitatif dan Penafsiran Hasil}
+Selain analisis numerik, penelitian ini juga mencakup peninjauan 
+kualitatif terhadap subset episode. 
+Peneliti memilih beberapa contoh instruksi dari berbagai 
+\textit{scene} dan tingkat kompleksitas untuk dianalisis 
+secara manual, mencakup:
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item Keterbacaan instruksi bagi pembaca manusia.
+    \item Kejelasan referensi objek dan landmark di lingkungan.
+    \item Kesesuaian urutan kalimat dengan urutan trajektori.
+    \item Kewajaran pola \textit{code-switching} (misalnya 
+          penggunaan bahasa Inggris terutama pada nama objek 
+          dan terminologi teknis).
+\end{enumerate}
+Hasil analisis kualitatif digunakan untuk menafsirkan angka-angka 
+pada metrik kuantitatif dan mengidentifikasi contoh kasus 
+yang berhasil maupun yang masih bermasalah.
+
+\vspace{0.5em}
+
+\subsection{Uji Coba, Evaluasi, dan Penyimpulan}
+
+\vspace{0.5em}
+
+\subsubsection{Uji Coba dan Evaluasi}
+Sebelum eksperimen utama dilakukan, penelitian diawali dengan 
+uji coba awal (\textit{pilot study}) menggunakan sejumlah kecil tugas. 
+Tahap ini bertujuan untuk:
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item Memastikan setiap modul \textit{pipeline} (pembangkitan tugas, 
+          simulasi, segmentasi, pembangkitan instruksi, dan evaluasi) 
+          berfungsi dengan benar.
+    \item Mengkalibrasi parameter penting seperti batas langkah, 
+          \textit{timeout}, jumlah sampel instruksi per trajektori, 
+          dan ambang skor $r_{\text{cs}}$ serta $s_{\text{nav}}$.
+\end{enumerate}
+
+Setelah \textit{pipeline} stabil, dilakukan eksperimen utama 
+dengan menjalankan pembangkitan dan eksekusi tugas dalam jumlah besar 
+pada subset scene HM3D yang telah ditentukan. 
+Hasil eksekusi dicatat sebagai \textit{success tasks} dan \textit{fail tasks}.
+Secara operasional, sebuah tugas $t$ dikategorikan sebagai \textit{success task}
+apabila terdapat setidaknya satu percobaan eksekusi (\textit{episode attempt})
+yang menyelesaikan seluruh subtugas dalam batas langkah $K_{\max}$ dan
+\textit{timeout}, serta jarak geodesik akhir terhadap target berada di bawah
+ambang $d_{\mathrm{succ}}$.
+Sebaliknya, $t$ dikategorikan sebagai \textit{fail task} apabila
+(i) salah satu target memiliki jarak geodesik tak hingga pada \textit{navmesh}
+(tugas tidak dapat dieksekusi), atau
+(ii) seluruh percobaan eksekusi hingga batas $M$ berakhir tanpa memenuhi
+kriteria keberhasilan (misalnya mencapai $K_{\max}$ atau terkena \textit{timeout}).
+\textit{Fail tasks} tetap dicatat untuk kebutuhan statistik kegagalan,
+namun tidak diteruskan ke tahap segmentasi dan pembangkitan instruksi.
+
+Ambang batas keberhasilan dataset ditetapkan sebagai berikut:
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item Setiap navigasi mesti berakhir pada jarak geodesik 
+          di bawah 1 meter dari objek target \parencite{Song2025}.
+    \item \textit{Task Success Rate} dan \textit{Navigation Success Rate} 
+          harus berada pada rentang tinggi (mendekati satu) 
+          pada himpunan \textit{success tasks}.
+    \item Rasio \textit{success tasks} terhadap total kandidat tugas 
+          diharapkan melebihi sekitar 50\%, sehingga dataset akhir 
+          tetap cukup besar dan berkualitas.
+    \item Rasio token bahasa Inggris $r_{\text{cs}}$ 
+          diinstruksikan berada pada interval 
+          $\alpha_{\min}$--$\alpha_{\max}$ (misalnya 0{,}20--0{,}40) 
+          untuk memastikan pola \textit{code-switching} yang wajar.
+\end{enumerate}
+
+Seluruh metrik navigasi dan metrik \textit{code-switching} 
+kemudian dihitung hanya pada himpunan \textit{success tasks}. 
+Hal ini memastikan bahwa analisis linguistik dilakukan pada instruksi 
+yang terbukti dapat dijalankan oleh agen di simulator, sehingga 
+tingkat halusinasi instruksi relatif rendah \parencite{dogruoz-survey, hidayatullah2023peerj,tarunesh-etal-2021-machine}.
+
+\vspace{0.5em}
+
+\subsubsection{Cara Penyimpulan}
+Penyimpulan hasil penelitian dilakukan melalui beberapa langkah sistematis:
+\begin{enumerate}[label=\alph*., left=0pt, labelsep=0.33cm, itemsep=0pt, topsep=0pt, partopsep=0pt, parsep=0pt]
+    \item Mengumpulkan nilai seluruh metrik utama (navigasi dan 
+          \textit{code-switching}) dan menyajikannya dalam bentuk 
+          tabel maupun grafik ringkas.
+    \item Mengaitkan hasil numerik dengan temuan kualitatif, 
+          misalnya dengan menampilkan contoh instruksi yang 
+          memiliki skor baik maupun buruk.
+    \item Membandingkan karakteristik dataset yang dihasilkan 
+          dengan karakteristik yang diharapkan dari perspektif 
+          penelitian VLN dan \textit{code-switching}.
+    \item Menyusun kesimpulan yang menjawab rumusan masalah, 
+          serta memberikan saran pengembangan untuk penelitian selanjutnya.
+\end{enumerate}
+Dengan demikian, proses uji coba, evaluasi, dan penyimpulan berjalan 
+secara terstruktur dan transparan.
+
+\vspace{0.5em}
+
+\section{Jadwal Pelaksanaan}
+\label{sec:jadwal_pelaksanaan}
+
+Penelitian ini direncanakan berlangsung selama sembilan bulan efektif,
+mulai Agustus 2025 sampai dengan April 2026. Kegiatan penelitian
+dikelompokkan ke dalam beberapa tahapan teknis, yaitu:
+(1) studi literatur dan analisis \textit{state-of-the-art},
+(2) perancangan arsitektur \textit{pipeline} LH-VLN berbasis LLM 
+    beserta skema evaluasinya,
+(3) implementasi lingkungan eksperimen dan integrasi komponen perangkat lunak,
+(4) pembangkitan dan kurasi dataset instruksi navigasi 
+    \textit{code-switching} Indonesia--Inggris,
+(5) pelaksanaan eksperimen evaluasi dan analisis hasil, serta
+(6) penyusunan dan finalisasi naskah skripsi.
+Rincian jadwal pelaksanaan setiap tahapan ditunjukkan pada 
+Tabel~\ref{tab:jadwal_pelaksanaan}.
+
+\begin{table}[H]
+  \centering
+  \caption{Jadwal Pelaksanaan Penelitian}
+  \label{tab:jadwal_pelaksanaan}
+  \begingroup
+  \fontsize{10}{12}\selectfont
+  \setlength{\tabcolsep}{3pt}
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabularx}{\textwidth}{|c|
+    >{\raggedright\arraybackslash}X|
+    c|c|c|c|c|c|c|c|c|}
+    \hline
+    \multirow{2}{*}{\textbf{No.}} &
+    \multirow{2}{*}{\textbf{Kegiatan}} &
+    \multicolumn{9}{c|}{\textbf{Bulan 2025--2026}} \\
+    \cline{3-11}
+    & & \textbf{Ags} & \textbf{Sep} & \textbf{Okt} &
+      \textbf{Nov} & \textbf{Des} & \textbf{Jan} &
+      \textbf{Feb} & \textbf{Mar} & \textbf{Apr} \\
+    \hline
+    1. & Studi literatur dan analisis
+         state-of-the-art LH-VLN, NavGen,
+         dan code-switching &
+      \cellcolor{phaseLit} &
+      \cellcolor{phaseLit} &
+      \cellcolor{phaseLit} &
+      & & & & & \\
+    \hline
+    2. & Perancangan arsitektur pipeline
+         LH-VLN berbasis LLM in-the-loop
+         dan rancangan metrik evaluasi dataset &
+      \cellcolor{phaseDes} &
+      \cellcolor{phaseDes} &
+      \cellcolor{phaseDes} &
+      & & & & & \\
+    \hline
+    3. & Implementasi lingkungan eksperimen
+         (Habitat--HM3D, integrasi NavGen, LLM,
+         dan model pengenalan objek/scene) &
+      & & \cellcolor{phaseImpl} &
+      \cellcolor{phaseImpl} &
+      \cellcolor{phaseImpl} &
+      & & & \\
+    \hline
+    4. & Pembangkitan dan kurasi dataset
+         instruksi navigasi long-horizon
+         code-switching Indonesia--Inggris &
+      & & & \cellcolor{phaseData} &
+      \cellcolor{phaseData} &
+      \cellcolor{phaseData} &
+      \cellcolor{phaseData} &
+      & \\
+    \hline
+    5. & Eksperimen evaluasi kualitas dataset
+         (kepatuhan rencana--instruksi, rasio dan pola
+         code-switch, serta keragaman episode) dan
+         analisis hasil &
+      & & & & \cellcolor{phaseEval} &
+      \cellcolor{phaseEval} &
+      \cellcolor{phaseEval} &
+      \cellcolor{phaseEval} &
+      \\
+    \hline
+    6. & Penyusunan, revisi, dan finalisasi
+         naskah skripsi berdasarkan hasil eksperimen &
+      & & & & & \cellcolor{phaseWrite} &
+      \cellcolor{phaseWrite} &
+      \cellcolor{phaseWrite} &
+      \cellcolor{phaseWrite} \\
+    \hline
+  \end{tabularx}
+  \endgroup
+\end{table}

@@ -1,0 +1,5 @@
+ALT TEXT:
+Gantt-style timeline for a long-horizon episode: sequential sub-tasks, translucent bands for global plan and local control, triangles marking replans and crosses marking local failures.
+
+CAPTION:
+Long-horizon episode timeline with replan and local failure markers.
