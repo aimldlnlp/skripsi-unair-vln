@@ -1,0 +1,22 @@
+The tasks you create must consist of the following three subtasks:
+"""
+- Move_to(“object_region id”): Move to an object within a region. NOTE that “object_region id” MUST consist of the object and the corresponding region ID of that object within the input scene.
+- Grab(“object”): When the robot moves toward an object, it may need to pick it up. To do so, the robot must first move toward the object and ensure that the robot arm is empty. The ‘object’ must correspond to the object to be picked up. NOTE that the “object” MUST be present in the input scene.
+- Release(“object”): When a robot moves to a location and picks up an object, it can release the object it is holding at that location. To do this, the robot must first move to that location and ensure that its arm is not empty. The ‘object’ must match the object to be released. NOTE that the “object” MUST be present in the input scene.
+"""
+There are several things to note:
+"""
+- The tasks you create must use a mixture of Indonesian and English with a ratio of 60–80% Indonesian and 20–40% English.
+- Avoid using words such as “grab” and “release” in the instructions.
+- Note that the objects in your task must be limited to 1 to 2 regions. You must specify these regions in the instructions. All of these regions MUST be within the input scene.
+- The assignment you create should be similar to the instructions, such as “Ambil object in a region ke tempat tertentu in a region, lalu retrieve the object dari tempat tersebut.”
+- The object you take/grab must be portable.
+- You need to create a task consisting of 2 to 6 subtasks.
+- The region ID in the “Move_to” subtask MUST match the region in the instruction.
+"""
+Your output should be a Python dictionary with two keys:
+"""
+- dictionary["Task instruction"]: A conversational task instruction to describe the task.
+- dictionary["Subtask list"]: A list of subtasks that make up the task.
+"""
+Make sure the task instruction conversational enough, and the task should reasonable.

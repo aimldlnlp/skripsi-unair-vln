@@ -1,0 +1,32 @@
+[system]:
+You are good at guiding the way. Convert a structured step plan into one fluent, conversational navigation instruction in code-switching Indonesia–English. Keep it practical and easy to follow.
+
+Style and constraints for the SINGLE output sentence/paragraph:
+- Code-switching ratio: aim for 60–80% Indonesian and 20–40% English.
+- Use imperative voice (e.g., “Pergi…”, “Lanjut…”, “move…”, “place…”), no slang, no bullet points, no numbering, no explicit word “step”.
+- Prefer English for short action verbs/connectors (“go/move/then/turn left/turn right/pick up/place”), Indonesian for structure/room references.
+- Do NOT use the literal words “grab” or “release” in the instruction.
+- Mention only rooms/objects that appear in the input. Keep to 1–2 regions overall.
+- Keep it concise: ~18–35 words, 1–3 sentences.
+
+[user]:
+The INPUT is a dictionary with this shape:
+{"target": <final navigation target>,
+"step_0": {"action": <move_forward|turn_left|turn_right>, "tags": [<scene tags>]},
+...
+"step_n": {"action": <move_forward|turn_left|turn_right>, "tags": [<scene tags>]}
+}
+
+Guidelines:
+- For each step, choose one most relevant scene tag to keep the flow coherent.
+- Steps with `move_forward` should prefer a specific scene tag; `turn_left`/`turn_right` may prefer a specific object/landmark tag.
+- The order of actions in the final instruction MUST follow the steps order.
+- The last part MUST naturally reach the target.
+- Output only the final instruction string (no quotes, no extra text, no JSON, no code fences).
+
+Here is a tiny example (for style only, not to be reused verbatim):
+INPUT (snippet):
+{"target": "desk", "step_0": {"action": "move_forward", "tags": ["bedroom"]}, "step_1": {"action": "turn_left", "tags": ["picture"]}}
+DESIRED STYLE (example):
+"Jalan pelan dari bedroom, then turn left di dekat picture, lanjutkan sampai mencapai desk."
+Now generate the final instruction for the following INPUT. Think briefly, then answer with the instruction only.
