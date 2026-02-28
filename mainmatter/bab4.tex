@@ -313,46 +313,46 @@ dan persentil 95\% sebesar 0{,}31202 berarti sekitar 95\% tugas sukses berada pa
 \subsection{Efektivitas vs Efisiensi pada Skenario \textit{Long-Horizon}}
 \label{subsec:nav_task_discussion}
 
-Nilai \textit{Mean task step} sebesar 233{,}70 menunjukkan bahwa tugas yang berhasil dieksekusi rata-rata membutuhkan ratusan langkah.
-Dalam konteks navigasi berantai, skala langkah seperti ini mengindikasikan skenario \textit{long-horizon} yang bersifat multi-tahap (multiobjek/sub-goal).
-Konsekuensinya, efektivitas end-to-end tidak hanya ditentukan oleh kemampuan mencapai satu target, tetapi juga oleh stabilitas eksekusi pada beberapa episode berurutan,
-sehingga error kecil pada tiap tahap berpotensi terakumulasi dan menurunkan keberhasilan end-to-end.
-Benchmark modern untuk agen \textit{embodied} juga menekankan perlunya diagnosis yang lebih halus daripada \textit{final success rate} karena kegagalan dapat muncul dari
-berbagai sumber (misal \textit{planning error} dan \textit{affordance error}) \parencite{li2024eai}.
+Nilai \textit{Mean task step} sebesar 233{,}70 menunjukkan bahwa satu tugas yang berhasil umumnya memerlukan ratusan langkah.
+Pada konteks navigasi berantai, besaran ini menandakan skenario \textit{long-horizon} yang terdiri atas beberapa episode/sub-goal berurutan.
+Artinya, efektivitas tidak cukup dinilai dari kemampuan menyelesaikan satu episode secara terpisah, melainkan dari konsistensi agen mempertahankan keberhasilan
+dari awal hingga akhir rangkaian. Pada rezim seperti ini, kesalahan kecil yang tampak lokal dapat berdampak sistemik karena muncul berulang di sepanjang urutan aksi.
+Temuan ini sejalan dengan benchmark modern agen \textit{embodied} yang menekankan diagnosis lebih rinci dibanding sekadar \textit{final success rate}
+\parencite{li2024eai}.
 
-Rasio rata-rata langkah mengindikasikan sekitar 3{,}21 episode per tugas (secara agregat).
-Dengan beberapa episode berurutan, keberhasilan end-to-end menjadi lebih rapuh terhadap kesalahan kecil pada tiap episode: kegagalan pada satu episode saja dapat menggagalkan
-keseluruhan rangkaian.
-Literatur perencanaan \textit{long-horizon} juga melaporkan bahwa error perencanaan dapat bersifat akumulatif ketika horizon bertambah, sehingga performa end-to-end dapat turun
-meskipun komponen lokal tampak sangat kuat \parencite{deps2023neurips,egoplan2023neurips}.
+Indikator agregat memperlihatkan bahwa satu tugas memuat sekitar 3{,}21 episode.
+Konsekuensinya, kegagalan pada satu episode saja sudah cukup untuk menghentikan keberhasilan end-to-end, walaupun episode lain berjalan baik.
+Dengan kata lain, semakin panjang rangkaian, semakin rapuh keberhasilan total terhadap gangguan kecil pada level lokal.
+Literatur \textit{long-horizon planning} juga melaporkan pola serupa: ketika horizon bertambah, efek error perencanaan cenderung menumpuk dan menurunkan performa end-to-end
+meskipun kemampuan komponen lokal terlihat kuat \parencite{deps2023neurips,egoplan2023neurips}.
 
-Selisih kecil antara \textit{Mean navigation success rate} (0{,}9982) dan \textit{Mean task success rate} (0{,}9945) konsisten dengan perspektif reliabilitas:
-tugas end-to-end dapat dipandang sebagai rangkaian fase/episode yang seluruhnya harus berhasil. Dalam kerangka ini, ketika jumlah fase meningkat,
-peluang sukses total menurun secara kumulatif walaupun peluang sukses per fase sangat tinggi. Model penilaian \textit{mission success probability} pada
-\textit{phased-mission systems} dan analisis kegagalan pada sistem seri--paralel juga membahas mekanisme akumulasi risiko kegagalan pada rangkaian fase/komponen
+Selisih kecil antara \textit{Mean navigation success rate} (0{,}9982) dan \textit{Mean task success rate} (0{,}9945) konsisten dengan pembacaan reliabilitas berantai.
+Keberhasilan episode yang sangat tinggi tetap dapat menghasilkan keberhasilan tugas yang sedikit lebih rendah karena tugas menuntut keberhasilan beruntun pada beberapa fase.
+Model \textit{phased-mission systems} dan analisis sistem seri--paralel juga menyoroti pola akumulasi risiko pada rangkaian komponen/fase
 \parencite{zhang2024msp_pms,torrado2024series_parallel_dependent}.
-Meskipun analogi reliabilitas sering diasosiasikan dengan asumsi independensi antar fase, pada konteks navigasi berantai interpretasi ini digunakan sebagai justifikasi konseptual
-untuk menjelaskan kecenderungan penurunan keberhasilan end-to-end ketika jumlah episode meningkat, tanpa mengklaim independensi penuh antar episode.
-Intinya, semakin banyak episode yang harus berhasil secara berurutan, semakin besar peluang setidaknya satu episode gagal, sehingga keberhasilan end-to-end menurun secara kumulatif.
+Pada penelitian ini, analogi reliabilitas dipakai sebagai kerangka interpretasi konseptual untuk menjelaskan kecenderungan tersebut, bukan untuk mengklaim independensi penuh antar episode.
 
-Gambar~\ref{fig:disc_risk_contour_dense} dapat dibaca sebagai berikut: sumbu horizontal merepresentasikan keberhasilan per episode, dan sumbu vertikal merepresentasikan panjang horizon efektif (jumlah episode).
-Kontur menunjukkan nilai keberhasilan end-to-end yang diprediksi pada kombinasi kedua besaran tersebut.
-Titik observasi menandai nilai yang diukur pada eksperimen, dan kedekatan titik dengan kontur nilai terukur menunjukkan konsistensi hubungan akumulasi risiko pada data.
+Gambar~\ref{fig:disc_risk_contour_dense} merangkum relasi akumulasi risiko dalam format bidang XY yang lebih analitis.
+Sumbu horizontal merepresentasikan keberhasilan pada level episode, sedangkan sumbu vertikal merepresentasikan panjang horizon efektif (jumlah episode).
+Area kontur memperlihatkan kecenderungan keberhasilan end-to-end pada kombinasi kedua besaran tersebut, dan titik observasi menandai hasil eksperimen yang diperoleh.
+Pembacaan visual ini menegaskan bahwa ketika horizon bertambah, penurunan kecil pada keberhasilan level episode dapat lebih mudah terlihat dampaknya pada level tugas.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.96\linewidth]{images/nav-tugas/fig_discussion_risk_contour_2d_v4_dense_left.pdf}
-  \caption{Peta Kontur Akumulasi Risiko End-to-End Berbasis Keberhasilan Per Episode dan Panjang Horizon Efektif, dengan Titik Observasi dan Kontur Nilai Terukur.}
+  \caption{Visualisasi Bidang XY untuk Akumulasi Risiko End-to-End berdasarkan Keberhasilan per Episode dan Panjang Horizon Efektif, Disertai Titik Observasi Eksperimen.}
   \label{fig:disc_risk_contour_dense}
 \end{figure}
 
-Gambar~\ref{fig:disc_risk_curve_panels} memberikan pandangan komplementer: kurva sensitivitas memperlihatkan bagaimana perubahan jumlah episode efektif memengaruhi keberhasilan end-to-end pada keberhasilan episode yang tinggi,
-sedangkan panel \textit{zoom} menonjolkan selisih kecil antara prediksi ilustratif dan nilai terukur di sekitar titik observasi.
+Gambar~\ref{fig:disc_risk_curve_panels} memberikan sudut pandang komplementer dalam format kurva pada bidang XY.
+Panel utama memperlihatkan bagaimana keberhasilan end-to-end berubah terhadap keberhasilan episode pada beberapa horizon efektif, sedangkan panel \textit{zoom}
+menunjukkan bahwa nilai terukur berada dekat dengan kecenderungan kurva di sekitar titik observasi.
+Dengan pembacaan ini, pesan utamanya tetap naratif: horizon yang lebih panjang membuat sistem lebih sensitif terhadap gangguan kecil, sehingga reliabilitas lintas episode dan efisiensi runtime perlu dijaga bersamaan.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.96\linewidth]{images/nav-tugas/fig_discussion_risk_curve_2d_v4_panels.pdf}
-  \caption{Kurva Akumulasi Risiko dan Panel Diagnostik untuk Memvalidasi Konsistensi Antara Prediksi Ilustratif dan Nilai Terukur di Sekitar Titik Observasi.}
+  \caption{Kurva Bidang XY Akumulasi Risiko pada Beberapa Horizon Efektif dan Panel Diagnostik di Sekitar Titik Observasi untuk Membaca Sensitivitas Keberhasilan End-to-End.}
   \label{fig:disc_risk_curve_panels}
 \end{figure}
 
