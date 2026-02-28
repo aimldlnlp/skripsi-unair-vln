@@ -50,3 +50,13 @@ Thumbs.db
 # ====================
 *.listing
 *.bbl-SAVE-ERROR
+
+# ====================
+# Python
+# ====================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
