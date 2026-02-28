@@ -1,9 +1,17 @@
-﻿import numpy as np
+import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 
 
 def main():
+    # Paper-like typography: serif text with Times-style fallback.
+    plt.rcParams.update({
+        "font.family": "serif",
+        "font.serif": ["Times New Roman", "Times", "Nimbus Roman", "DejaVu Serif"],
+        "mathtext.fontset": "stix",
+        "axes.unicode_minus": False,
+    })
+
     rng = np.random.default_rng(42)
 
     # Synthetic-but-structured points for visual explanation only
@@ -46,7 +54,7 @@ def main():
 
     ax.set_xlabel(r"$N_{step}$", labelpad=10)
     ax.set_ylabel(r"$\Delta t$", labelpad=10)
-    ax.set_zlabel("Execution outcome", labelpad=8)
+    ax.set_zlabel("Execution outcome", labelpad=9)
 
     ax.set_zticks([0, 1])
     ax.set_zticklabels(["Fail", "Success"])
@@ -59,9 +67,9 @@ def main():
     ax.view_init(elev=23, azim=-57)
 
     ax.legend(loc="upper left", bbox_to_anchor=(0.02, 0.98), frameon=True, fontsize=9)
-    ax.set_title("3D Execution Space Partition: Success vs Fail Tasks", pad=12, fontsize=12)
 
     out = "images/nav-tugas/fig_protocol_3d_partition_en_v3.pdf"
+    fig.subplots_adjust(left=0.02, right=0.93, bottom=0.03, top=0.98)
     fig.savefig(out, dpi=300, bbox_inches="tight")
     print(f"Saved: {out}")
 
